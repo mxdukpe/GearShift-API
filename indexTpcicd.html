@@ -1,0 +1,1379 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Projet CI/CD & DevOps — Master 1</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #8b5cf6;
+            --primary-dark: #7c3aed;
+        }
+
+        html { scroll-behavior: smooth; }
+        body { font-family: 'Inter', sans-serif; }
+
+        .sidebar {
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar-link {
+            transition: all 0.2s ease;
+            border-left: 3px solid transparent;
+        }
+
+        .sidebar-link:hover,
+        .sidebar-link.active {
+            background: rgba(139, 92, 246, 0.1);
+            color: #8b5cf6;
+            border-left-color: #8b5cf6;
+        }
+
+        .callout {
+            border-left: 4px solid;
+            border-radius: 0 8px 8px 0;
+            padding: 16px 20px;
+            margin: 16px 0;
+        }
+
+        .callout-info { border-color: #3b82f6; background: #eff6ff; }
+        .callout-warning { border-color: #f59e0b; background: #fffbeb; }
+        .callout-danger { border-color: #ef4444; background: #fef2f2; }
+        .callout-success { border-color: #22c55e; background: #f0fdf4; }
+        .callout-tip { border-color: #8b5cf6; background: #f5f3ff; }
+
+        @keyframes pulse-dot {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.7; }
+        }
+
+        .pulse-dot { animation: pulse-dot 2s ease-in-out infinite; }
+
+        .section-content {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.6s ease;
+        }
+
+        .section-content.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .terminal {
+            background: #0f172a;
+            border-radius: 12px;
+            overflow: hidden;
+            margin: 1rem 0;
+        }
+
+        .terminal-header {
+            background: #1e293b;
+            padding: 8px 16px;
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .terminal-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .terminal-body {
+            padding: 16px;
+            color: #e2e8f0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            line-height: 1.8;
+        }
+
+        .terminal-body .prompt { color: #22c55e; }
+        .terminal-body .comment { color: #64748b; }
+        .terminal-body .output { color: #94a3b8; }
+        .terminal-body .highlight { color: #f59e0b; }
+        .terminal-body .error { color: #ef4444; }
+        .terminal-body .keyword { color: #818cf8; }
+        .terminal-body .string { color: #34d399; }
+
+        .step-num {
+            width: 44px;
+            height: 44px;
+            min-width: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            font-weight: 700;
+        }
+
+        .tech-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .deliverable-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .tool-card {
+            transition: all 0.3s ease;
+        }
+
+        .tool-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        .pipeline-step {
+            position: relative;
+        }
+
+        .pipeline-step::after {
+            content: '';
+            position: absolute;
+            right: -20px;
+            top: 50%;
+            transform: translateY(-50%);
+            border-left: 8px solid #8b5cf6;
+            border-top: 6px solid transparent;
+            border-bottom: 6px solid transparent;
+        }
+
+        .pipeline-step:last-child::after {
+            display: none;
+        }
+
+        .pattern-card {
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+        }
+
+        .pattern-card:hover {
+            border-left-color: #8b5cf6;
+            background: #faf5ff;
+        }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 3px; }
+
+        @media (max-width: 1024px) {
+            .sidebar {
+                transform: translateX(-100%);
+                position: fixed;
+                z-index: 50;
+            }
+            .sidebar.open { transform: translateX(0); }
+            .main-content { margin-left: 0 !important; }
+        }
+
+        @media print {
+            .sidebar { display: none !important; }
+            .main-content { margin-left: 0 !important; }
+            .section-content { opacity: 1 !important; transform: none !important; }
+        }
+    </style>
+</head>
+<body class="bg-white text-gray-800">
+    <div class="flex h-screen">
+
+        <!-- SIDEBAR -->
+        <nav id="sidebar" class="sidebar w-64 bg-slate-50 border-r border-slate-200 p-6 overflow-y-auto fixed h-full">
+            <div class="mb-8">
+                <span class="text-xs font-semibold text-purple-600 uppercase tracking-wider">CI/CD & DevOps</span>
+                <h1 class="text-xl font-bold text-slate-800 mt-1">Projet Individuel</h1>
+                <p class="text-xs text-slate-500 mt-1">M1 Full Stack &mdash; 3 jours</p>
+            </div>
+
+            <div class="mb-4">
+                <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Navigation</p>
+                <ul class="space-y-1">
+                    <li><a href="#contexte" class="sidebar-link block px-4 py-2 text-sm text-slate-600 rounded-r-lg">Contexte & consignes</a></li>
+                    <li><a href="#code" class="sidebar-link block px-4 py-2 text-sm text-slate-600 rounded-r-lg">1 &mdash; Code & Design Patterns</a></li>
+                    <li><a href="#tests" class="sidebar-link block px-4 py-2 text-sm text-slate-600 rounded-r-lg">2 &mdash; Tests</a></li>
+                    <li><a href="#qualite" class="sidebar-link block px-4 py-2 text-sm text-slate-600 rounded-r-lg">3 &mdash; Qualite de code</a></li>
+                    <li><a href="#git" class="sidebar-link block px-4 py-2 text-sm text-slate-600 rounded-r-lg">4 &mdash; Git & Conventions</a></li>
+                    <li><a href="#docker" class="sidebar-link block px-4 py-2 text-sm text-slate-600 rounded-r-lg">5 &mdash; Docker</a></li>
+                    <li><a href="#pipeline" class="sidebar-link block px-4 py-2 text-sm text-slate-600 rounded-r-lg">6 &mdash; Pipeline CI/CD</a></li>
+                    <li><a href="#iac" class="sidebar-link block px-4 py-2 text-sm text-slate-600 rounded-r-lg">7 &mdash; Infrastructure as Code</a></li>
+                    <li><a href="#monitoring" class="sidebar-link block px-4 py-2 text-sm text-slate-600 rounded-r-lg">8 &mdash; Monitoring</a></li>
+                    <li><a href="#documentation" class="sidebar-link block px-4 py-2 text-sm text-slate-600 rounded-r-lg">9 &mdash; Documentation</a></li>
+                    <li><a href="#evaluation" class="sidebar-link block px-4 py-2 text-sm text-slate-600 rounded-r-lg">Grille d'evaluation</a></li>
+                </ul>
+            </div>
+
+            <div class="mt-6 pt-4 border-t border-slate-200 space-y-2">
+                <a href="https://ic-etagsolutions.com/cours/cicd/chapitre-1/cours.html" class="text-sm text-slate-500 hover:text-purple-600 font-medium block" target="_blank">&larr; Chapitre 1 &mdash; Intro CI/CD</a>
+                <a href="https://ic-etagsolutions.com/cours/cicd/chapitre-2/cours.html" class="text-sm text-slate-500 hover:text-purple-600 font-medium block" target="_blank">&larr; Chapitre 2 &mdash; Tests & Qualite</a>
+            </div>
+        </nav>
+
+        <!-- MAIN CONTENT -->
+        <main class="main-content flex-1 overflow-y-auto ml-64">
+
+            <!-- MOBILE MENU BUTTON -->
+            <button id="menuBtn" class="lg:hidden fixed top-4 left-4 z-50 bg-purple-600 text-white p-2 rounded-lg shadow-lg">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+            </button>
+
+            <!-- HEADER -->
+            <header class="bg-gradient-to-r from-purple-700 via-indigo-600 to-violet-600 text-white p-12">
+                <div class="max-w-4xl">
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="bg-white/20 text-white text-xs font-bold px-3 py-1 rounded-full">3 JOURS</span>
+                        <span class="bg-white/20 text-white text-xs font-bold px-3 py-1 rounded-full">PROJET INDIVIDUEL</span>
+                        <span class="bg-white/20 text-white text-xs font-bold px-3 py-1 rounded-full">NOTE SUR 20</span>
+                    </div>
+                    <h1 class="text-4xl md:text-5xl font-extrabold mb-4 leading-tight">
+                        Projet CI/CD & DevOps<br>Production-Ready
+                    </h1>
+                    <p class="text-lg opacity-90 max-w-2xl">
+                        Concevez, developpez et deployez une application complete avec un pipeline CI/CD professionnel, une architecture de code solide, et une infrastructure reproductible. Votre code, votre pipeline, vos choix, vos justifications.
+                    </p>
+                    <div class="flex flex-wrap gap-4 mt-6">
+                        <span class="flex items-center gap-2 text-sm opacity-80"><span class="w-2 h-2 bg-green-400 rounded-full pulse-dot"></span> Code structure avec Design Patterns</span>
+                        <span class="flex items-center gap-2 text-sm opacity-80"><span class="w-2 h-2 bg-blue-400 rounded-full pulse-dot"></span> Pipeline CI/CD complet (GitHub Actions)</span>
+                        <span class="flex items-center gap-2 text-sm opacity-80"><span class="w-2 h-2 bg-yellow-400 rounded-full pulse-dot"></span> Docker, IaC, Monitoring</span>
+                        <span class="flex items-center gap-2 text-sm opacity-80"><span class="w-2 h-2 bg-red-400 rounded-full pulse-dot"></span> Documentation & Justification des choix</span>
+                    </div>
+                </div>
+            </header>
+
+            <div class="max-w-4xl mx-auto px-8 py-12">
+
+                <!-- ============================================================ -->
+                <!-- CONTEXTE & CONSIGNES -->
+                <!-- ============================================================ -->
+                <section id="contexte" class="section-content mb-16">
+                    <h2 class="text-3xl font-bold text-slate-800 mb-6 flex items-center gap-3">
+                        <span class="bg-purple-100 text-purple-700 w-10 h-10 rounded-lg flex items-center justify-center text-lg font-bold">0</span>
+                        Contexte & consignes generales
+                    </h2>
+
+                    <div class="bg-gradient-to-br from-slate-50 to-purple-50 rounded-2xl p-8 mb-6">
+                        <h3 class="text-xl font-bold mb-4 text-slate-800">A propos de ce projet</h3>
+                        <div class="grid md:grid-cols-2 gap-6">
+                            <div>
+                                <p class="text-sm text-slate-500 font-medium mb-1">Module</p>
+                                <p class="text-slate-700 font-semibold">CI/CD & DevOps</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-slate-500 font-medium mb-1">Duree</p>
+                                <p class="text-slate-700 font-semibold">3 jours</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-slate-500 font-medium mb-1">Travail</p>
+                                <p class="text-slate-700 font-semibold">100% Individuel</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-slate-500 font-medium mb-1">Livrable</p>
+                                <p class="text-slate-700 font-semibold">1 repository GitHub public, fonctionnel et documente</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-slate-500 font-medium mb-1">Langage</p>
+                                <p class="text-slate-700 font-semibold">Libre (JS/TS, Python, Java, PHP, Go, Rust...)</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-slate-500 font-medium mb-1">Type de projet</p>
+                                <p class="text-slate-700 font-semibold">Au choix : API REST, app web, CLI, bot, microservice...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="callout callout-danger">
+                        <p class="font-semibold text-red-800">Regles imperatives</p>
+                        <ul class="text-sm text-red-900 mt-2 space-y-1 list-disc list-inside ml-2">
+                            <li>Travail <strong>100% individuel</strong> &mdash; tout plagiat ou copie sera sanctionne par la note de 0</li>
+                            <li>L'utilisation de l'IA est autorisee pour <strong>generer du code applicatif</strong>, mais chaque choix technique doit etre <strong>compris et justifie</strong> dans la documentation</li>
+                            <li>Un pipeline copie-colle sans justification = 0 sur la partie pipeline</li>
+                            <li>Le repo doit avoir un <strong>historique Git propre</strong> (pas un seul commit a la fin)</li>
+                        </ul>
+                    </div>
+
+                    <div class="callout callout-warning mt-4">
+                        <p class="font-semibold text-amber-800">Quand quelque chose est impossible ou payant</p>
+                        <p class="text-sm text-amber-900 mt-2">
+                            Certaines exigences impliquent des outils payants ou des infrastructures difficiles a mettre en place (serveurs cloud, domaines, etc.). <strong>Si une exigence est techniquement ou financierement irrealisable</strong>, vous devez l'expliquer en detail dans votre documentation :
+                        </p>
+                        <ul class="text-sm text-amber-900 mt-2 space-y-1 list-disc list-inside ml-2">
+                            <li>Quel outil vous auriez utilise et pourquoi</li>
+                            <li>Comment vous l'auriez configure (fichiers de config, screenshots, schemas)</li>
+                            <li>Pourquoi vous ne pouvez pas le faire ici (cout, acces, etc.)</li>
+                            <li>Le workaround que vous avez mis en place (ou pourquoi il n'y en a pas)</li>
+                        </ul>
+                        <p class="text-sm text-amber-900 mt-2 font-semibold">Une explication claire et technique vaut des points. Une exigence ignoree sans justification en fait perdre.</p>
+                    </div>
+
+                    <div class="callout callout-tip mt-4">
+                        <p class="font-semibold text-purple-800">Le projet en lui-meme n'est PAS le livrable principal</p>
+                        <p class="text-sm text-purple-900 mt-2">
+                            L'IA peut generer une API en 5 minutes. Ce n'est pas ce qu'on evalue. Ce qu'on evalue, c'est <strong>tout ce qu'il y a autour</strong> : la qualite du code (design patterns, architecture), les tests, le pipeline, le Docker, l'IaC, le monitoring, et surtout <strong>vos justifications</strong>. Le projet doit etre suffisamment complexe pour justifier toutes ces couches &mdash; un simple CRUD avec 2 routes ne suffira pas.
+                        </p>
+                    </div>
+
+                </section>
+
+
+                <!-- ============================================================ -->
+                <!-- PARTIE 1 — CODE & DESIGN PATTERNS -->
+                <!-- ============================================================ -->
+                <section id="code" class="section-content mb-16">
+                    <h2 class="text-3xl font-bold text-slate-800 mb-6 flex items-center gap-3">
+                        <span class="bg-purple-100 text-purple-700 w-10 h-10 rounded-lg flex items-center justify-center text-lg font-bold">1</span>
+                        Code & Design Patterns
+                    </h2>
+
+                    <div class="flex items-center gap-3 mb-6">
+                        <span class="deliverable-tag">Evalue sur /4 points</span>
+                    </div>
+
+                    <div class="callout callout-danger">
+                        <p class="font-semibold text-red-800">Pourquoi c'est la partie la plus importante</p>
+                        <p class="text-sm text-red-900 mt-2">
+                            Si votre code est mal structure, <strong>tout le reste s'effondre</strong>. Des fonctions de 200 lignes sont impossibles a tester unitairement. Un code sans separation des responsabilites produit des tests d'integration fragiles. Un code sans injection de dependances oblige a des mocks bricolees. <strong>La qualite de vos tests est le reflet direct de la qualite de votre code.</strong>
+                        </p>
+                    </div>
+
+                    <!-- ARCHITECTURE -->
+                    <h3 class="text-xl font-bold text-slate-700 mt-8 mb-4">Architecture & structure attendues</h3>
+
+                    <div class="bg-gradient-to-br from-slate-50 to-purple-50 rounded-2xl p-6 mb-6">
+                        <ul class="text-sm text-slate-700 space-y-3">
+                            <li><strong>Architecture claire et coherente</strong> &mdash; MVC, Clean Architecture, Hexagonal, ou toute architecture que vous pouvez justifier. L'important est que la structure soit identifiable et qu'il y ait une raison derriere.</li>
+                            <li><strong>Separation des responsabilites</strong> &mdash; Chaque module/classe/fichier a un role unique. Pas de logique metier dans les controleurs. Pas de requetes SQL dans les routes. Pas de console.log("ca marche") en guise de logging.</li>
+                            <li><strong>Code propre</strong> &mdash; Fonctions courtes, nommage explicite, pas de magic numbers, pas de code duplique (DRY). Le code doit etre lisible sans commentaires.</li>
+                        </ul>
+                    </div>
+
+                    <div class="callout callout-tip">
+                        <p class="font-semibold text-purple-800">Rappel &mdash; Principes SOLID</p>
+                        <ul class="text-sm text-purple-900 mt-2 space-y-1 list-disc list-inside ml-2">
+                            <li><strong>S</strong>ingle Responsibility : une classe = une responsabilite</li>
+                            <li><strong>O</strong>pen/Closed : ouvert a l'extension, ferme a la modification</li>
+                            <li><strong>L</strong>iskov Substitution : un sous-type doit etre substituable a son type parent</li>
+                            <li><strong>I</strong>nterface Segregation : plusieurs interfaces specifiques > une interface generale</li>
+                            <li><strong>D</strong>ependency Inversion : dependre des abstractions, pas des implementations</li>
+                        </ul>
+                    </div>
+
+                    <!-- DESIGN PATTERNS -->
+                    <h3 class="text-xl font-bold text-slate-700 mt-8 mb-4">Design Patterns &mdash; Minimum 3, a bon escient</h3>
+
+                    <div class="callout callout-warning mb-6">
+                        <p class="font-semibold text-amber-800">Attention</p>
+                        <p class="text-sm text-amber-900 mt-2">Les patterns doivent etre utilises la ou ils resolvent un <strong>vrai probleme</strong>, pas plaques artificiellement pour cocher une case. Si un pattern complique le code sans apporter de valeur, c'est pire que pas de pattern du tout. Pour chaque pattern, vous devez justifier : <strong>ou</strong> il est utilise, <strong>pourquoi</strong> ici, et <strong>en quoi</strong> il facilite les tests ou la maintenance.</p>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-4 mb-6">
+                        <div class="pattern-card bg-white border border-slate-200 rounded-xl p-5">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="tech-badge bg-purple-100 text-purple-700">Creational</span>
+                                <h4 class="font-bold text-slate-800">Singleton</h4>
+                            </div>
+                            <p class="text-sm text-slate-600">Garantir une instance unique d'un objet. Cas d'usage : connexion BDD, logger, configuration globale.</p>
+                            <div class="terminal mt-3">
+                                <div class="terminal-header">
+                                    <div class="terminal-dot bg-red-500"></div>
+                                    <div class="terminal-dot bg-yellow-500"></div>
+                                    <div class="terminal-dot bg-green-500"></div>
+                                    <span class="text-xs text-slate-400 ml-2">exemple conceptuel</span>
+                                </div>
+                                <div class="terminal-body">
+                                    <div><span class="comment">// Au lieu de creer 10 connexions BDD :</span></div>
+                                    <div><span class="keyword">const</span> db = Database.<span class="string">getInstance</span>()</div>
+                                    <div><span class="comment">// Toujours la meme instance partout</span></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pattern-card bg-white border border-slate-200 rounded-xl p-5">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="tech-badge bg-purple-100 text-purple-700">Creational</span>
+                                <h4 class="font-bold text-slate-800">Factory / Abstract Factory</h4>
+                            </div>
+                            <p class="text-sm text-slate-600">Creer des objets sans specifier la classe exacte. Cas d'usage : generation de rapports (PDF/CSV/Excel), types de notifications.</p>
+                            <div class="terminal mt-3">
+                                <div class="terminal-header">
+                                    <div class="terminal-dot bg-red-500"></div>
+                                    <div class="terminal-dot bg-yellow-500"></div>
+                                    <div class="terminal-dot bg-green-500"></div>
+                                    <span class="text-xs text-slate-400 ml-2">exemple conceptuel</span>
+                                </div>
+                                <div class="terminal-body">
+                                    <div><span class="keyword">const</span> report = ReportFactory.<span class="string">create</span>(<span class="string">'pdf'</span>)</div>
+                                    <div><span class="comment">// Facile a tester : on peut creer un FakeReport</span></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pattern-card bg-white border border-slate-200 rounded-xl p-5">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="tech-badge bg-blue-100 text-blue-700">Behavioral</span>
+                                <h4 class="font-bold text-slate-800">Strategy</h4>
+                            </div>
+                            <p class="text-sm text-slate-600">Algorithmes interchangeables a l'execution. Cas d'usage : calcul de prix, validation, tri, authentification multi-providers.</p>
+                            <div class="terminal mt-3">
+                                <div class="terminal-header">
+                                    <div class="terminal-dot bg-red-500"></div>
+                                    <div class="terminal-dot bg-yellow-500"></div>
+                                    <div class="terminal-dot bg-green-500"></div>
+                                    <span class="text-xs text-slate-400 ml-2">exemple conceptuel</span>
+                                </div>
+                                <div class="terminal-body">
+                                    <div><span class="comment">// Changer d'algo sans modifier le code appelant</span></div>
+                                    <div>pricing.<span class="string">setStrategy</span>(<span class="keyword">new</span> StudentDiscount())</div>
+                                    <div>pricing.<span class="string">calculate</span>(cart)</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pattern-card bg-white border border-slate-200 rounded-xl p-5">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="tech-badge bg-blue-100 text-blue-700">Behavioral</span>
+                                <h4 class="font-bold text-slate-800">Observer</h4>
+                            </div>
+                            <p class="text-sm text-slate-600">Notification automatique lors d'un changement d'etat. Cas d'usage : evenements, webhooks, notification quand une ressource change.</p>
+                            <div class="terminal mt-3">
+                                <div class="terminal-header">
+                                    <div class="terminal-dot bg-red-500"></div>
+                                    <div class="terminal-dot bg-yellow-500"></div>
+                                    <div class="terminal-dot bg-green-500"></div>
+                                    <span class="text-xs text-slate-400 ml-2">exemple conceptuel</span>
+                                </div>
+                                <div class="terminal-body">
+                                    <div>orderService.<span class="string">on</span>(<span class="string">'created'</span>, sendEmail)</div>
+                                    <div>orderService.<span class="string">on</span>(<span class="string">'created'</span>, updateStock)</div>
+                                    <div><span class="comment">// Decoupler les effets secondaires</span></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pattern-card bg-white border border-slate-200 rounded-xl p-5">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="tech-badge bg-green-100 text-green-700">Structural</span>
+                                <h4 class="font-bold text-slate-800">Repository</h4>
+                            </div>
+                            <p class="text-sm text-slate-600">Abstraction de l'acces aux donnees. Cas d'usage : changer de BDD sans toucher a la logique metier, faciliter le mocking dans les tests.</p>
+                            <div class="terminal mt-3">
+                                <div class="terminal-header">
+                                    <div class="terminal-dot bg-red-500"></div>
+                                    <div class="terminal-dot bg-yellow-500"></div>
+                                    <div class="terminal-dot bg-green-500"></div>
+                                    <span class="text-xs text-slate-400 ml-2">exemple conceptuel</span>
+                                </div>
+                                <div class="terminal-body">
+                                    <div><span class="comment">// En prod : PostgresUserRepo</span></div>
+                                    <div><span class="comment">// En test : InMemoryUserRepo (Fake)</span></div>
+                                    <div><span class="keyword">const</span> service = <span class="keyword">new</span> UserService(userRepo)</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pattern-card bg-white border border-slate-200 rounded-xl p-5">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="tech-badge bg-green-100 text-green-700">Structural</span>
+                                <h4 class="font-bold text-slate-800">Decorator</h4>
+                            </div>
+                            <p class="text-sm text-slate-600">Ajouter des comportements sans modifier la classe. Cas d'usage : logging, caching, validation autour d'un service existant.</p>
+                            <div class="terminal mt-3">
+                                <div class="terminal-header">
+                                    <div class="terminal-dot bg-red-500"></div>
+                                    <div class="terminal-dot bg-yellow-500"></div>
+                                    <div class="terminal-dot bg-green-500"></div>
+                                    <span class="text-xs text-slate-400 ml-2">exemple conceptuel</span>
+                                </div>
+                                <div class="terminal-body">
+                                    <div><span class="comment">// Ajouter du cache sans toucher au service</span></div>
+                                    <div><span class="keyword">const</span> service = <span class="keyword">new</span> CachedService(</div>
+                                    <div>&nbsp;&nbsp;<span class="keyword">new</span> LoggedService(baseService)</div>
+                                    <div>)</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pattern-card bg-white border border-slate-200 rounded-xl p-5">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="tech-badge bg-green-100 text-green-700">Structural</span>
+                                <h4 class="font-bold text-slate-800">Adapter</h4>
+                            </div>
+                            <p class="text-sm text-slate-600">Rendre compatible une interface existante avec une autre. Cas d'usage : wrapper d'API externe, migration de librairie.</p>
+                            <div class="terminal mt-3">
+                                <div class="terminal-header">
+                                    <div class="terminal-dot bg-red-500"></div>
+                                    <div class="terminal-dot bg-yellow-500"></div>
+                                    <div class="terminal-dot bg-green-500"></div>
+                                    <span class="text-xs text-slate-400 ml-2">exemple conceptuel</span>
+                                </div>
+                                <div class="terminal-body">
+                                    <div><span class="comment">// Wrapper une API externe pour l'isoler</span></div>
+                                    <div><span class="keyword">const</span> mailer = <span class="keyword">new</span> SendGridAdapter(config)</div>
+                                    <div><span class="comment">// Si on change de provider : un seul fichier</span></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pattern-card bg-white border border-slate-200 rounded-xl p-5">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="tech-badge bg-blue-100 text-blue-700">Behavioral</span>
+                                <h4 class="font-bold text-slate-800">Middleware / Chain of Responsibility</h4>
+                            </div>
+                            <p class="text-sm text-slate-600">Pipeline de traitement sequentiel. Cas d'usage : auth &rarr; validation &rarr; rate limiting &rarr; handler.</p>
+                            <div class="terminal mt-3">
+                                <div class="terminal-header">
+                                    <div class="terminal-dot bg-red-500"></div>
+                                    <div class="terminal-dot bg-yellow-500"></div>
+                                    <div class="terminal-dot bg-green-500"></div>
+                                    <span class="text-xs text-slate-400 ml-2">exemple conceptuel</span>
+                                </div>
+                                <div class="terminal-body">
+                                    <div>app.<span class="string">use</span>(authMiddleware)</div>
+                                    <div>app.<span class="string">use</span>(validateMiddleware)</div>
+                                    <div>app.<span class="string">use</span>(rateLimitMiddleware)</div>
+                                    <div><span class="comment">// Chaque couche est testable independamment</span></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="callout callout-success">
+                        <p class="font-semibold text-green-800">Le lien patterns &harr; tests</p>
+                        <p class="text-sm text-green-900 mt-2">
+                            Un bon design pattern rend le code <strong>testable par construction</strong>. Le pattern Repository permet de remplacer une vraie BDD par un Fake en test. Le pattern Strategy permet de tester chaque algorithme isolement. Le pattern Adapter permet de mocker une API externe proprement. Si vos patterns ne facilitent pas vos tests, c'est qu'ils sont mal utilises.
+                        </p>
+                    </div>
+                </section>
+
+                <!-- ============================================================ -->
+                <!-- PARTIE 2 — TESTS -->
+                <!-- ============================================================ -->
+                <section id="tests" class="section-content mb-16">
+                    <h2 class="text-3xl font-bold text-slate-800 mb-6 flex items-center gap-3">
+                        <span class="bg-purple-100 text-purple-700 w-10 h-10 rounded-lg flex items-center justify-center text-lg font-bold">2</span>
+                        Tests
+                    </h2>
+
+                    <div class="flex items-center gap-3 mb-6">
+                        <span class="deliverable-tag">Evalue sur /3 points</span>
+                    </div>
+
+                    <!-- PYRAMIDE DES TESTS -->
+                    <div class="bg-gradient-to-br from-slate-50 to-indigo-50 rounded-2xl p-8 mb-6">
+                        <h3 class="text-lg font-bold text-slate-800 mb-4">Rappel &mdash; La pyramide des tests</h3>
+                        <div class="flex flex-col items-center gap-2">
+                            <div class="bg-red-100 text-red-800 text-xs font-bold px-6 py-2 rounded-lg text-center" style="width: 30%;">E2E (5-10%)<br><span class="font-normal">Lent, fragile, peu nombreux</span></div>
+                            <div class="bg-yellow-100 text-yellow-800 text-xs font-bold px-6 py-3 rounded-lg text-center" style="width: 55%;">Integration (15-20%)<br><span class="font-normal">Interaction entre modules</span></div>
+                            <div class="bg-green-100 text-green-800 text-xs font-bold px-6 py-4 rounded-lg text-center" style="width: 85%;">Unitaires (70-80%)<br><span class="font-normal">Rapides, stables, nombreux</span></div>
+                        </div>
+                    </div>
+
+                    <!-- TESTS UNITAIRES -->
+                    <div class="bg-white border-2 border-green-200 rounded-2xl p-6 mb-6">
+                        <h3 class="text-lg font-bold text-slate-800 mb-3 flex items-center gap-2">
+                            <span class="tech-badge bg-green-100 text-green-700">Obligatoire</span>
+                            Tests unitaires
+                        </h3>
+                        <ul class="text-sm text-slate-700 space-y-2">
+                            <li>Couvrent la <strong>logique metier</strong> : calculs, transformations, validations</li>
+                            <li>Structure <strong>AAA systematique</strong> : Arrange (preparer) &rarr; Act (executer) &rarr; Assert (verifier)</li>
+                            <li>Nommage explicite : <code class="bg-slate-100 px-2 py-0.5 rounded text-xs">should [resultat] when [condition]</code></li>
+                            <li><strong>Un test = un comportement</strong> &mdash; pas de test qui verifie 5 choses a la fois</li>
+                            <li>Mocking <strong>uniquement pour les dependances externes</strong> (API, BDD, filesystem)</li>
+                        </ul>
+                        <div class="callout callout-tip mt-4">
+                            <p class="text-xs text-purple-900"><strong>Rappel cours :</strong> Si mocker vos dependances est complique, c'est que votre code est mal decoupl&eacute;. Un pattern Repository ou Adapter resout ce probleme.</p>
+                        </div>
+                    </div>
+
+                    <!-- TESTS INTEGRATION -->
+                    <div class="bg-white border-2 border-yellow-200 rounded-2xl p-6 mb-6">
+                        <h3 class="text-lg font-bold text-slate-800 mb-3 flex items-center gap-2">
+                            <span class="tech-badge bg-yellow-100 text-yellow-700">Obligatoire</span>
+                            Tests d'integration
+                        </h3>
+                        <ul class="text-sm text-slate-700 space-y-2">
+                            <li>Testent l'<strong>interaction entre modules</strong> (routes + controleurs + BDD)</li>
+                            <li>Base de test : SQLite en memoire, conteneur Docker, ou base dediee</li>
+                            <li>Cas nominaux <strong>ET</strong> cas d'erreur (404, 400, 401, 409...)</li>
+                            <li>Testent les middlewares (auth, validation, rate limiting)</li>
+                        </ul>
+                    </div>
+
+                    <!-- TESTS E2E -->
+                    <div class="bg-white border-2 border-red-200 rounded-2xl p-6 mb-6">
+                        <h3 class="text-lg font-bold text-slate-800 mb-3 flex items-center gap-2">
+                            <span class="tech-badge bg-red-100 text-red-700">Si applicable</span>
+                            Tests end-to-end
+                        </h3>
+                        <ul class="text-sm text-slate-700 space-y-2">
+                            <li>Simulent un <strong>vrai utilisateur</strong> (Cypress, Playwright, Selenium)</li>
+                            <li>Minimum 2-3 scenarios critiques si vous avez un front</li>
+                            <li>Si pas applicable (API pure, CLI), expliquez pourquoi et <strong>compensez avec plus de tests d'integration</strong></li>
+                        </ul>
+                    </div>
+
+                    <!-- COUVERTURE -->
+                    <div class="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl p-6 mb-6">
+                        <h3 class="text-lg font-bold text-slate-800 mb-3">Couverture de code</h3>
+                        <div class="grid md:grid-cols-3 gap-4">
+                            <div class="bg-white rounded-xl p-4 text-center border border-slate-200">
+                                <p class="text-3xl font-bold text-purple-700">70%</p>
+                                <p class="text-xs text-slate-500 mt-1">Seuil minimum global</p>
+                                <p class="text-xs text-slate-400">Bloquant dans le pipeline</p>
+                            </div>
+                            <div class="bg-white rounded-xl p-4 text-center border border-slate-200">
+                                <p class="text-3xl font-bold text-green-600">Qualite</p>
+                                <p class="text-xs text-slate-500 mt-1"> > Quantite</p>
+                                <p class="text-xs text-slate-400">Un test sans assertion = 0 valeur</p>
+                            </div>
+                            <div class="bg-white rounded-xl p-4 text-center border border-slate-200">
+                                <p class="text-3xl font-bold text-blue-600">Rapport</p>
+                                <p class="text-xs text-slate-500 mt-1">Genere dans le pipeline</p>
+                                <p class="text-xs text-slate-400">Artefact ou badge dans le README</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="callout callout-danger">
+                        <p class="font-semibold text-red-800">Rappel &mdash; Les pieges du cours</p>
+                        <ul class="text-sm text-red-900 mt-2 space-y-1 list-disc list-inside ml-2">
+                            <li><strong>100% couverture &ne; 0 bugs</strong> &mdash; Visez des tests de qualite, pas du remplissage</li>
+                            <li><strong>Test sans assertion</strong> &mdash; Un test qui appelle une API sans verifier la reponse passe toujours mais protege de rien</li>
+                            <li><strong>Tests flaky (instables)</strong> &mdash; Meme code, meme resultat a chaque fois. Pas de dependance a l'heure, au reseau, ou a l'ordre d'execution</li>
+                            <li><strong>Pyramide inversee</strong> &mdash; Beaucoup d'E2E et peu d'unitaires = suite lente et fragile</li>
+                        </ul>
+                    </div>
+                </section>
+
+                <!-- ============================================================ -->
+                <!-- PARTIE 3 — QUALITE DE CODE -->
+                <!-- ============================================================ -->
+                <section id="qualite" class="section-content mb-16">
+                    <h2 class="text-3xl font-bold text-slate-800 mb-6 flex items-center gap-3">
+                        <span class="bg-purple-100 text-purple-700 w-10 h-10 rounded-lg flex items-center justify-center text-lg font-bold">3</span>
+                        Qualite de code automatisee
+                    </h2>
+
+                    <div class="flex items-center gap-3 mb-6">
+                        <span class="deliverable-tag">Evalue sur /2 points</span>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-6 mb-6">
+                        <!-- LINTING -->
+                        <div class="bg-white border-2 border-blue-200 rounded-2xl p-6">
+                            <h3 class="text-lg font-bold text-slate-800 mb-3">Linting & Formatting</h3>
+                            <ul class="text-sm text-slate-700 space-y-2">
+                                <li><strong>Linter</strong> configure avec des regles personnalisees et justifiees (pas juste la config par defaut)</li>
+                                <li><strong>Formatter</strong> configure (Prettier, Black, etc.)</li>
+                                <li><strong>Pre-commit hook</strong> (Husky, pre-commit) : lint + format avant chaque commit</li>
+                                <li>Le pipeline CI verifie aussi (double filet de securite)</li>
+                            </ul>
+                            <div class="terminal mt-4">
+                                <div class="terminal-header">
+                                    <div class="terminal-dot bg-red-500"></div>
+                                    <div class="terminal-dot bg-yellow-500"></div>
+                                    <div class="terminal-dot bg-green-500"></div>
+                                    <span class="text-xs text-slate-400 ml-2">Linters par langage</span>
+                                </div>
+                                <div class="terminal-body">
+                                    <div><span class="prompt">JavaScript/TS</span> &rarr; <span class="highlight">ESLint + Prettier</span></div>
+                                    <div><span class="prompt">Python</span> &rarr; <span class="highlight">Ruff ou Flake8 + Black</span></div>
+                                    <div><span class="prompt">Java</span> &rarr; <span class="highlight">Checkstyle + SpotBugs</span></div>
+                                    <div><span class="prompt">PHP</span> &rarr; <span class="highlight">PHP_CodeSniffer + PHPStan</span></div>
+                                    <div><span class="prompt">Go</span> &rarr; <span class="highlight">golangci-lint</span></div>
+                                    <div><span class="prompt">Rust</span> &rarr; <span class="highlight">Clippy + rustfmt</span></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ANALYSE STATIQUE -->
+                        <div class="bg-white border-2 border-green-200 rounded-2xl p-6">
+                            <h3 class="text-lg font-bold text-slate-800 mb-3">Analyse statique & SonarCloud</h3>
+                            <ul class="text-sm text-slate-700 space-y-2">
+                                <li><strong>SonarCloud</strong> (gratuit pour repos publics) ou equivalent</li>
+                                <li>Quality Gate : 0 bugs, 0 vulnerabilites, duplication &lt; 3%, couverture &ge; 70%</li>
+                                <li>Commentaire automatique dans les PR</li>
+                                <li>Si SonarCloud impossible (repo prive), expliquez et utilisez un outil local (SonarLint, CodeClimate CLI)</li>
+                            </ul>
+                            <div class="callout callout-info mt-4">
+                                <p class="text-xs text-blue-900"><strong>SonarCloud detecte :</strong> Bugs, Code Smells, Vulnerabilites, Duplication, Dette technique. C'est votre deuxieme filet de securite apres le linter.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SECURITE DES DEPENDANCES -->
+                    <div class="bg-white border-2 border-red-200 rounded-2xl p-6">
+                        <h3 class="text-lg font-bold text-slate-800 mb-3">Securite des dependances</h3>
+                        <p class="text-sm text-slate-700 mb-3">Activez <strong>au moins un</strong> outil de scan de dependances sur votre repo :</p>
+                        <div class="grid grid-cols-3 gap-4">
+                            <div class="bg-red-50 rounded-xl p-4 text-center">
+                                <p class="text-sm font-bold text-red-700">Dependabot</p>
+                                <p class="text-xs text-slate-500 mt-1">Integre a GitHub, gratuit</p>
+                            </div>
+                            <div class="bg-red-50 rounded-xl p-4 text-center">
+                                <p class="text-sm font-bold text-red-700">Snyk</p>
+                                <p class="text-xs text-slate-500 mt-1">Gratuit pour l'open source</p>
+                            </div>
+                            <div class="bg-red-50 rounded-xl p-4 text-center">
+                                <p class="text-sm font-bold text-red-700">Trivy</p>
+                                <p class="text-xs text-slate-500 mt-1">Open source, images Docker aussi</p>
+                            </div>
+                        </div>
+                        <p class="text-sm text-slate-600 mt-3">Le pipeline doit <strong>echouer</strong> si une vulnerabilite critique est detectee.</p>
+                    </div>
+                </section>
+
+                <!-- ============================================================ -->
+                <!-- PARTIE 4 — GIT & CONVENTIONS -->
+                <!-- ============================================================ -->
+                <section id="git" class="section-content mb-16">
+                    <h2 class="text-3xl font-bold text-slate-800 mb-6 flex items-center gap-3">
+                        <span class="bg-purple-100 text-purple-700 w-10 h-10 rounded-lg flex items-center justify-center text-lg font-bold">4</span>
+                        Git & Conventions
+                    </h2>
+
+                    <div class="flex items-center gap-3 mb-6">
+                        <span class="deliverable-tag">Evalue sur /2 points</span>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-6 mb-6">
+                        <div class="bg-white border-2 border-purple-200 rounded-2xl p-6">
+                            <h3 class="text-lg font-bold text-slate-800 mb-3">Conventional Commits</h3>
+                            <div class="terminal mt-3">
+                                <div class="terminal-header">
+                                    <div class="terminal-dot bg-red-500"></div>
+                                    <div class="terminal-dot bg-yellow-500"></div>
+                                    <div class="terminal-dot bg-green-500"></div>
+                                    <span class="text-xs text-slate-400 ml-2">Format : &lt;type&gt;(&lt;scope&gt;): &lt;description&gt;</span>
+                                </div>
+                                <div class="terminal-body">
+                                    <div><span class="prompt">feat(auth):</span> <span class="string">add JWT token validation</span></div>
+                                    <div><span class="prompt">fix(api):</span> <span class="string">return 404 when user not found</span></div>
+                                    <div><span class="prompt">test(user):</span> <span class="string">add unit tests for UserService</span></div>
+                                    <div><span class="prompt">ci:</span> <span class="string">add SonarCloud to pipeline</span></div>
+                                    <div><span class="prompt">refactor(db):</span> <span class="string">extract repository pattern</span></div>
+                                    <div><span class="prompt">docs:</span> <span class="string">add pipeline architecture diagram</span></div>
+                                    <div>&nbsp;</div>
+                                    <div><span class="error">BAD:</span> <span class="output">"fix stuff"</span></div>
+                                    <div><span class="error">BAD:</span> <span class="output">"update"</span></div>
+                                    <div><span class="error">BAD:</span> <span class="output">"WIP"</span></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white border-2 border-purple-200 rounded-2xl p-6">
+                            <h3 class="text-lg font-bold text-slate-800 mb-3">Strategie de branches</h3>
+                            <ul class="text-sm text-slate-700 space-y-2 mb-4">
+                                <li><strong>GitHub Flow</strong> : main protegee + branches feature</li>
+                                <li>Nommage : <code class="bg-slate-100 px-2 py-0.5 rounded text-xs">feature/</code>, <code class="bg-slate-100 px-2 py-0.5 rounded text-xs">fix/</code>, <code class="bg-slate-100 px-2 py-0.5 rounded text-xs">ci/</code>, <code class="bg-slate-100 px-2 py-0.5 rounded text-xs">refactor/</code></li>
+                                <li>Chaque feature &rarr; branche &rarr; PR &rarr; merge</li>
+                                <li><strong>Minimum 5 PR</strong> dans l'historique</li>
+                            </ul>
+                            <div class="callout callout-danger">
+                                <p class="text-xs text-red-900"><strong>Protection de main :</strong> push direct interdit, PR obligatoire, CI verte obligatoire avant merge, branche a jour avec main.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="callout callout-warning">
+                        <p class="font-semibold text-amber-800">Un historique Git propre fait partie du livrable</p>
+                        <p class="text-sm text-amber-900 mt-2">Un repo avec 3 commits ("initial commit", "add everything", "fix") montre un manque de rigueur. L'historique doit refleter une progression logique : setup &rarr; features &rarr; tests &rarr; pipeline &rarr; docker &rarr; iac &rarr; monitoring. Minimum <strong>5 Pull Requests</strong> mergees.</p>
+                    </div>
+                </section>
+
+                <!-- ============================================================ -->
+                <!-- PARTIE 5 — DOCKER -->
+                <!-- ============================================================ -->
+                <section id="docker" class="section-content mb-16">
+                    <h2 class="text-3xl font-bold text-slate-800 mb-6 flex items-center gap-3">
+                        <span class="bg-purple-100 text-purple-700 w-10 h-10 rounded-lg flex items-center justify-center text-lg font-bold">5</span>
+                        Docker & Conteneurisation
+                    </h2>
+
+                    <div class="flex items-center gap-3 mb-6">
+                        <span class="deliverable-tag">Evalue sur /2 points</span>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-6 mb-6">
+                        <!-- DOCKERFILE -->
+                        <div class="bg-white border-2 border-blue-200 rounded-2xl p-6">
+                            <h3 class="text-lg font-bold text-slate-800 mb-3">Dockerfile</h3>
+                            <ul class="text-sm text-slate-700 space-y-2">
+                                <li><strong>Multi-stage build</strong> : stage build separe du stage production</li>
+                                <li><strong>Image legere</strong> : Alpine, slim, ou distroless</li>
+                                <li><strong>Utilisateur non-root</strong> (securite)</li>
+                                <li><strong>.dockerignore</strong> : node_modules, .git, .env, tests, docs</li>
+                                <li><strong>Aucun secret</strong> dans l'image ou le Dockerfile</li>
+                                <li><strong>HEALTHCHECK</strong> dans le Dockerfile</li>
+                                <li><strong>Labels</strong> : mainteneur, version</li>
+                            </ul>
+                        </div>
+
+                        <!-- DOCKER COMPOSE -->
+                        <div class="bg-white border-2 border-blue-200 rounded-2xl p-6">
+                            <h3 class="text-lg font-bold text-slate-800 mb-3">Docker Compose</h3>
+                            <p class="text-sm text-slate-600 mb-3">Si votre app a des dependances (BDD, cache, queue...) :</p>
+                            <ul class="text-sm text-slate-700 space-y-2">
+                                <li>Fichier <code class="bg-slate-100 px-2 py-0.5 rounded text-xs">docker-compose.yml</code> pour le dev local</li>
+                                <li>Services : app + BDD + cache si applicable</li>
+                                <li>Volumes pour la persistance</li>
+                                <li>Reseau dedie</li>
+                                <li>Variables d'environnement via <code class="bg-slate-100 px-2 py-0.5 rounded text-xs">.env.example</code></li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="bg-white border-2 border-green-200 rounded-2xl p-6 mb-6">
+                        <h3 class="text-lg font-bold text-slate-800 mb-3">Optimisation & Securite de l'image</h3>
+                        <div class="grid md:grid-cols-3 gap-4">
+                            <div class="bg-green-50 rounded-xl p-4 text-center">
+                                <p class="text-2xl font-bold text-green-700">&lt; 200MB</p>
+                                <p class="text-xs text-slate-500 mt-1">Taille cible de l'image finale</p>
+                                <p class="text-xs text-slate-400">Documentez la taille reelle</p>
+                            </div>
+                            <div class="bg-green-50 rounded-xl p-4 text-center">
+                                <p class="text-2xl font-bold text-green-700">Trivy</p>
+                                <p class="text-xs text-slate-500 mt-1">Scan de vulnerabilites</p>
+                                <p class="text-xs text-slate-400">Integre au pipeline CI</p>
+                            </div>
+                            <div class="bg-green-50 rounded-xl p-4 text-center">
+                                <p class="text-2xl font-bold text-green-700">Cache</p>
+                                <p class="text-xs text-slate-500 mt-1">Layer caching optimise</p>
+                                <p class="text-xs text-slate-400">Ordre des instructions compte</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="callout callout-tip">
+                        <p class="font-semibold text-purple-800">Rappel &mdash; Ordre des layers dans un Dockerfile</p>
+                        <p class="text-sm text-purple-900 mt-2">Les layers qui changent le moins souvent doivent etre en haut (OS, dependances systeme), celles qui changent le plus en bas (copie du code source). Cela optimise le cache Docker et reduit les temps de build.</p>
+                    </div>
+                </section>
+
+                <!-- ============================================================ -->
+                <!-- PARTIE 6 — PIPELINE CI/CD -->
+                <!-- ============================================================ -->
+                <section id="pipeline" class="section-content mb-16">
+                    <h2 class="text-3xl font-bold text-slate-800 mb-6 flex items-center gap-3">
+                        <span class="bg-purple-100 text-purple-700 w-10 h-10 rounded-lg flex items-center justify-center text-lg font-bold">6</span>
+                        Pipeline CI/CD (GitHub Actions)
+                    </h2>
+
+                    <div class="flex items-center gap-3 mb-6">
+                        <span class="deliverable-tag">Evalue sur /3 points</span>
+                    </div>
+
+                    <!-- PIPELINE CI -->
+                    <h3 class="text-xl font-bold text-slate-700 mb-4">Pipeline d'Integration Continue (CI)</h3>
+                    <p class="text-sm text-slate-600 mb-4">Se declenche sur chaque <strong>push</strong> et chaque <strong>Pull Request</strong>. Voici les etapes attendues :</p>
+
+                    <div class="terminal mb-6">
+                        <div class="terminal-header">
+                            <div class="terminal-dot bg-red-500"></div>
+                            <div class="terminal-dot bg-yellow-500"></div>
+                            <div class="terminal-dot bg-green-500"></div>
+                            <span class="text-xs text-slate-400 ml-2">.github/workflows/ci.yml &mdash; Pipeline CI attendu</span>
+                        </div>
+                        <div class="terminal-body">
+                            <div><span class="comment"># Declenchement</span></div>
+                            <div><span class="keyword">on:</span> <span class="string">push</span> + <span class="string">pull_request</span></div>
+                            <div>&nbsp;</div>
+                            <div><span class="comment"># ========= JOBS PARALLELES =========</span></div>
+                            <div>&nbsp;</div>
+                            <div><span class="prompt">[Job 1]</span> <span class="highlight">Lint & Format check</span></div>
+                            <div><span class="output">         Verifie que le code respecte les regles</span></div>
+                            <div>&nbsp;</div>
+                            <div><span class="prompt">[Job 2]</span> <span class="highlight">Tests unitaires</span></div>
+                            <div><span class="output">         + rapport de couverture (seuil &ge; 70%)</span></div>
+                            <div>&nbsp;</div>
+                            <div><span class="prompt">[Job 3]</span> <span class="highlight">Tests d'integration</span></div>
+                            <div><span class="output">         Avec services (BDD en conteneur si besoin)</span></div>
+                            <div>&nbsp;</div>
+                            <div><span class="prompt">[Job 4]</span> <span class="highlight">Analyse statique (SonarCloud)</span></div>
+                            <div><span class="output">         Quality Gate bloquante</span></div>
+                            <div>&nbsp;</div>
+                            <div><span class="prompt">[Job 5]</span> <span class="highlight">Scan securite dependances</span></div>
+                            <div><span class="output">         Echec si vulnerabilite critique</span></div>
+                            <div>&nbsp;</div>
+                            <div><span class="comment"># ========= JOBS SEQUENTIELS (needs:) =========</span></div>
+                            <div>&nbsp;</div>
+                            <div><span class="prompt">[Job 6]</span> <span class="highlight">Build application</span> <span class="output">(needs: lint, tests)</span></div>
+                            <div>&nbsp;</div>
+                            <div><span class="prompt">[Job 7]</span> <span class="highlight">Build image Docker</span> <span class="output">(needs: build)</span></div>
+                            <div>&nbsp;</div>
+                            <div><span class="prompt">[Job 8]</span> <span class="highlight">Scan image Docker (Trivy)</span> <span class="output">(needs: docker-build)</span></div>
+                        </div>
+                    </div>
+
+                    <div class="callout callout-tip mb-6">
+                        <p class="font-semibold text-purple-800">Rappel &mdash; Parallelisme et dependances</p>
+                        <p class="text-sm text-purple-900 mt-2">Par defaut, les jobs GitHub Actions tournent en <strong>parallele</strong>. Utilisez <code class="bg-purple-200 px-1 rounded text-xs">needs:</code> pour creer des dependances entre jobs. Les jobs independants (lint, tests, scan) doivent tourner en parallele pour accelerer le pipeline. N'oubliez pas le <strong>cache des dependances</strong> (<code class="bg-purple-200 px-1 rounded text-xs">actions/cache</code>) pour accelerer chaque run.</p>
+                    </div>
+
+                    <!-- PIPELINE CD -->
+                    <h3 class="text-xl font-bold text-slate-700 mb-4">Pipeline de Deploiement Continu (CD)</h3>
+
+                    <div class="bg-white border-2 border-orange-200 rounded-2xl p-6 mb-6">
+                        <div class="grid md:grid-cols-2 gap-6">
+                            <div>
+                                <h4 class="font-bold text-slate-800 mb-2 flex items-center gap-2">
+                                    <span class="tech-badge bg-yellow-100 text-yellow-700">Auto</span>
+                                    Staging
+                                </h4>
+                                <ul class="text-sm text-slate-700 space-y-1">
+                                    <li>Deploiement automatique a chaque merge sur <code class="bg-slate-100 px-1 rounded text-xs">main</code></li>
+                                    <li>Environnement GitHub Actions : <code class="bg-slate-100 px-1 rounded text-xs">environment: staging</code></li>
+                                </ul>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-slate-800 mb-2 flex items-center gap-2">
+                                    <span class="tech-badge bg-red-100 text-red-700">Manuel</span>
+                                    Production
+                                </h4>
+                                <ul class="text-sm text-slate-700 space-y-1">
+                                    <li>Declenche par <code class="bg-slate-100 px-1 rounded text-xs">workflow_dispatch</code> ou tag/release</li>
+                                    <li>Environnement GitHub Actions : <code class="bg-slate-100 px-1 rounded text-xs">environment: production</code> avec approval</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="callout callout-warning mb-6">
+                        <p class="font-semibold text-amber-800">Si le deploiement reel est impossible</p>
+                        <p class="text-sm text-amber-900 mt-2">Pas de serveur ? Simulez le deploiement : push de l'image Docker sur <strong>GitHub Container Registry (ghcr.io)</strong> ou Docker Hub. Le pipeline CD doit etre complet et fonctionnel meme s'il ne deploie que vers un registry. Documentez comment vous deploieriez en production (quel cloud, quelle config, quel cout estime).</p>
+                    </div>
+
+                    <!-- SECRETS & ROLLBACK -->
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div class="bg-white border-2 border-slate-200 rounded-2xl p-6">
+                            <h3 class="text-lg font-bold text-slate-800 mb-3">Gestion des secrets</h3>
+                            <ul class="text-sm text-slate-700 space-y-2">
+                                <li>Secrets via <strong>GitHub Secrets</strong> (jamais en dur)</li>
+                                <li>Acces : <code class="bg-slate-100 px-2 py-0.5 rounded text-xs">${{ secrets.NOM }}</code></li>
+                                <li>Pas de <code class="bg-slate-100 px-1 rounded text-xs">.env</code> commite</li>
+                                <li>Fichier <code class="bg-slate-100 px-1 rounded text-xs">.env.example</code> (sans valeurs) dans le repo</li>
+                            </ul>
+                        </div>
+                        <div class="bg-white border-2 border-slate-200 rounded-2xl p-6">
+                            <h3 class="text-lg font-bold text-slate-800 mb-3">Strategie de rollback</h3>
+                            <ul class="text-sm text-slate-700 space-y-2">
+                                <li>Documentee dans le README</li>
+                                <li>Mecanisme concret : redeploiement d'un tag precedent, revert de commit, ou rollback d'image Docker</li>
+                                <li>Expliquez la procedure etape par etape</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="callout callout-danger mt-6">
+                        <p class="font-semibold text-red-800">Le pipeline DOIT etre vert</p>
+                        <p class="text-sm text-red-900 mt-2">Un pipeline systematiquement rouge montre un manque de rigueur. Au moment du rendu, votre pipeline doit etre vert sur la branche main. Un pipeline rouge = points en moins.</p>
+                    </div>
+                </section>
+
+                <!-- ============================================================ -->
+                <!-- PARTIE 7 — INFRASTRUCTURE AS CODE -->
+                <!-- ============================================================ -->
+                <section id="iac" class="section-content mb-16">
+                    <h2 class="text-3xl font-bold text-slate-800 mb-6 flex items-center gap-3">
+                        <span class="bg-purple-100 text-purple-700 w-10 h-10 rounded-lg flex items-center justify-center text-lg font-bold">7</span>
+                        Infrastructure as Code
+                    </h2>
+
+                    <div class="flex items-center gap-3 mb-6">
+                        <span class="deliverable-tag">Evalue sur /3 points</span>
+                    </div>
+
+                    <p class="text-sm text-slate-600 mb-6">Utilisez <strong>au moins un</strong> des deux outils ci-dessous. Les deux = bonus.</p>
+
+                    <div class="grid md:grid-cols-2 gap-6 mb-6">
+                        <!-- TERRAFORM -->
+                        <div class="bg-white border-2 border-purple-200 rounded-2xl p-6">
+                            <div class="flex items-center gap-3 mb-4">
+                                <span class="text-2xl">&#9881;</span>
+                                <div>
+                                    <h3 class="text-lg font-bold text-slate-800">Terraform</h3>
+                                    <p class="text-xs text-slate-500">Provisionnement d'infrastructure</p>
+                                </div>
+                            </div>
+                            <ul class="text-sm text-slate-700 space-y-2">
+                                <li>Definir l'infra : serveur, reseau, BDD, DNS, load balancer...</li>
+                                <li>State file gere proprement (backend remote ou documente)</li>
+                                <li>Variables et outputs utilises</li>
+                                <li>Modules si pertinent</li>
+                                <li><code class="bg-slate-100 px-1 rounded text-xs">terraform plan</code> integre au pipeline (sur PR = preview des changements)</li>
+                            </ul>
+                            <div class="callout callout-info mt-4">
+                                <p class="text-xs text-blue-900"><strong>Sans cloud ?</strong> Utilisez le provider Docker (local), ou LocalStack (simule AWS gratuitement), ou ecrivez les fichiers pour un provider reel et documentez avec des screenshots du <code>terraform plan</code>.</p>
+                            </div>
+                        </div>
+
+                        <!-- ANSIBLE -->
+                        <div class="bg-white border-2 border-purple-200 rounded-2xl p-6">
+                            <div class="flex items-center gap-3 mb-4">
+                                <span class="text-2xl">&#9881;</span>
+                                <div>
+                                    <h3 class="text-lg font-bold text-slate-800">Ansible</h3>
+                                    <p class="text-xs text-slate-500">Configuration & deploiement</p>
+                                </div>
+                            </div>
+                            <ul class="text-sm text-slate-700 space-y-2">
+                                <li>Playbooks : installation dependances, config reverse proxy, deploiement app</li>
+                                <li>Inventaire (meme si un seul serveur local ou conteneur Docker)</li>
+                                <li>Roles si pertinent</li>
+                                <li>Variables et templates (Jinja2)</li>
+                                <li><strong>Idempotence</strong> : relancer le playbook ne casse rien</li>
+                            </ul>
+                            <div class="callout callout-info mt-4">
+                                <p class="text-xs text-blue-900"><strong>Sans serveur distant ?</strong> Testez sur un conteneur Docker local ou une VM Vagrant. L'important est de demontrer la maitrise de l'outil, pas d'avoir un serveur cloud.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="callout callout-tip">
+                        <p class="font-semibold text-purple-800">Terraform vs Ansible : pas le meme role</p>
+                        <p class="text-sm text-purple-900 mt-2">
+                            <strong>Terraform</strong> = "je cree l'infrastructure" (provisionner une VM, un reseau, un load balancer).<br>
+                            <strong>Ansible</strong> = "je configure l'infrastructure" (installer des packages, deployer l'app, configurer Nginx).<br>
+                            Les deux sont complementaires. Terraform cree la VM, Ansible la configure.
+                        </p>
+                    </div>
+                </section>
+
+                <!-- ============================================================ -->
+                <!-- PARTIE 8 — MONITORING -->
+                <!-- ============================================================ -->
+                <section id="monitoring" class="section-content mb-16">
+                    <h2 class="text-3xl font-bold text-slate-800 mb-6 flex items-center gap-3">
+                        <span class="bg-purple-100 text-purple-700 w-10 h-10 rounded-lg flex items-center justify-center text-lg font-bold">8</span>
+                        Monitoring & Observabilite
+                    </h2>
+
+                    <div class="flex items-center gap-3 mb-6">
+                        <span class="deliverable-tag">Evalue sur /2 points</span>
+                    </div>
+
+                    <div class="callout callout-info mb-6">
+                        <p class="font-semibold text-blue-800">Les 3 piliers de l'observabilite</p>
+                        <p class="text-sm text-blue-900 mt-2"><strong>Logs</strong> (que s'est-il passe ?), <strong>Metriques</strong> (comment se porte le systeme ?), <strong>Traces</strong> (ou est-ce que ca bloque ?). Votre projet doit couvrir au minimum les deux premiers.</p>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-6 mb-6">
+                        <!-- HEALTH CHECK -->
+                        <div class="bg-white border-2 border-green-200 rounded-2xl p-6">
+                            <h3 class="text-lg font-bold text-slate-800 mb-3">Health Check</h3>
+                            <ul class="text-sm text-slate-700 space-y-2">
+                                <li>Endpoint <code class="bg-slate-100 px-2 py-0.5 rounded text-xs">/health</code> ou <code class="bg-slate-100 px-2 py-0.5 rounded text-xs">/status</code></li>
+                                <li>Retourne l'etat de l'app ET de ses dependances (BDD, cache, services externes)</li>
+                                <li>Utilise par Docker HEALTHCHECK, le load balancer, et le monitoring</li>
+                            </ul>
+                            <div class="terminal mt-3">
+                                <div class="terminal-header">
+                                    <div class="terminal-dot bg-red-500"></div>
+                                    <div class="terminal-dot bg-yellow-500"></div>
+                                    <div class="terminal-dot bg-green-500"></div>
+                                    <span class="text-xs text-slate-400 ml-2">GET /health</span>
+                                </div>
+                                <div class="terminal-body">
+                                    <div>{</div>
+                                    <div>&nbsp;&nbsp;<span class="string">"status"</span>: <span class="prompt">"healthy"</span>,</div>
+                                    <div>&nbsp;&nbsp;<span class="string">"database"</span>: <span class="prompt">"connected"</span>,</div>
+                                    <div>&nbsp;&nbsp;<span class="string">"uptime"</span>: <span class="highlight">12345</span>,</div>
+                                    <div>&nbsp;&nbsp;<span class="string">"version"</span>: <span class="prompt">"1.2.0"</span></div>
+                                    <div>}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- LOGGING -->
+                        <div class="bg-white border-2 border-blue-200 rounded-2xl p-6">
+                            <h3 class="text-lg font-bold text-slate-800 mb-3">Logging structure</h3>
+                            <ul class="text-sm text-slate-700 space-y-2">
+                                <li>Logs au format <strong>JSON</strong> (pas de <code class="bg-slate-100 px-1 rounded text-xs">console.log("ca marche")</code>)</li>
+                                <li>Niveaux utilises correctement : <code class="bg-slate-100 px-1 rounded text-xs">debug</code>, <code class="bg-slate-100 px-1 rounded text-xs">info</code>, <code class="bg-slate-100 px-1 rounded text-xs">warn</code>, <code class="bg-slate-100 px-1 rounded text-xs">error</code></li>
+                                <li>Contexte : timestamp, request ID, user ID si applicable</li>
+                                <li><strong>Pas de donnees sensibles</strong> dans les logs (mots de passe, tokens)</li>
+                            </ul>
+                            <div class="terminal mt-3">
+                                <div class="terminal-header">
+                                    <div class="terminal-dot bg-red-500"></div>
+                                    <div class="terminal-dot bg-yellow-500"></div>
+                                    <div class="terminal-dot bg-green-500"></div>
+                                    <span class="text-xs text-slate-400 ml-2">Exemple de log structure</span>
+                                </div>
+                                <div class="terminal-body">
+                                    <div>{</div>
+                                    <div>&nbsp;&nbsp;<span class="string">"level"</span>: <span class="prompt">"info"</span>,</div>
+                                    <div>&nbsp;&nbsp;<span class="string">"timestamp"</span>: <span class="prompt">"2025-03-15T10:30:00Z"</span>,</div>
+                                    <div>&nbsp;&nbsp;<span class="string">"message"</span>: <span class="prompt">"User created"</span>,</div>
+                                    <div>&nbsp;&nbsp;<span class="string">"requestId"</span>: <span class="prompt">"abc-123"</span>,</div>
+                                    <div>&nbsp;&nbsp;<span class="string">"userId"</span>: <span class="highlight">42</span></div>
+                                    <div>}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-6 mb-6">
+                        <!-- METRIQUES -->
+                        <div class="bg-white border-2 border-orange-200 rounded-2xl p-6">
+                            <h3 class="text-lg font-bold text-slate-800 mb-3">Metriques & Dashboard</h3>
+                            <ul class="text-sm text-slate-700 space-y-2">
+                                <li><strong>Prometheus + Grafana</strong> ou stack equivalente</li>
+                                <li>Metriques de base : requetes/sec, temps de reponse, taux d'erreur, memoire/CPU</li>
+                                <li>Dashboard avec minimum <strong>4-5 panneaux</strong> pertinents</li>
+                                <li>Peut tourner en local via Docker Compose</li>
+                            </ul>
+                            <div class="callout callout-info mt-3">
+                                <p class="text-xs text-blue-900">Si impossible a heberger : faites tourner la stack en local, fournissez des <strong>screenshots</strong> du dashboard fonctionnel dans la doc.</p>
+                            </div>
+                        </div>
+
+                        <!-- ALERTING -->
+                        <div class="bg-white border-2 border-red-200 rounded-2xl p-6">
+                            <h3 class="text-lg font-bold text-slate-800 mb-3">Alerting</h3>
+                            <ul class="text-sm text-slate-700 space-y-2">
+                                <li>Minimum <strong>1 alerte configuree</strong> :</li>
+                                <li class="ml-4">App down (health check echoue)</li>
+                                <li class="ml-4">Taux d'erreur &gt; seuil</li>
+                                <li class="ml-4">Temps de reponse degrade</li>
+                                <li>Canal : email, Slack, Discord, webhook &mdash; au choix</li>
+                            </ul>
+                            <div class="callout callout-warning mt-3">
+                                <p class="text-xs text-amber-900">Si impossible a mettre en place : documentez la strategie d'alerting avec les <strong>seuils choisis et justifies</strong>.</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ============================================================ -->
+                <!-- PARTIE 9 — DOCUMENTATION -->
+                <!-- ============================================================ -->
+                <section id="documentation" class="section-content mb-16">
+                    <h2 class="text-3xl font-bold text-slate-800 mb-6 flex items-center gap-3">
+                        <span class="bg-purple-100 text-purple-700 w-10 h-10 rounded-lg flex items-center justify-center text-lg font-bold">9</span>
+                        Documentation
+                    </h2>
+
+                    <div class="flex items-center gap-3 mb-6">
+                        <span class="deliverable-tag">Evalue sur /1 point</span>
+                    </div>
+
+                    <div class="grid md:grid-cols-1 gap-6 mb-6">
+                        <!-- README -->
+                        <div class="bg-white border-2 border-purple-200 rounded-2xl p-6">
+                            <h3 class="text-lg font-bold text-slate-800 mb-3">README.md &mdash; Le point d'entree de votre projet</h3>
+                            <p class="text-sm text-slate-600 mb-4">Le correcteur lira votre README en premier. Il doit pouvoir comprendre votre projet, vos choix, et lancer le projet en local sans deviner.</p>
+                            <ul class="text-sm text-slate-700 space-y-2">
+                                <li><strong>Description</strong> du projet et son objectif</li>
+                                <li><strong>Stack technique</strong> et justification des choix</li>
+                                <li><strong>Comment lancer</strong> le projet en local (idealement : <code class="bg-slate-100 px-2 py-0.5 rounded text-xs">docker-compose up</code>)</li>
+                                <li><strong>Comment lancer les tests</strong></li>
+                                <li><strong>Schema de l'architecture</strong> de l'application</li>
+                                <li><strong>Schema du pipeline CI/CD</strong> (etapes, dependances entre jobs)</li>
+                                <li><strong>Badges</strong> : build status, couverture, qualite SonarCloud</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-6 mb-6">
+                        <!-- DESIGN PATTERNS DOC -->
+                        <div class="bg-white border-2 border-indigo-200 rounded-2xl p-6">
+                            <h3 class="text-lg font-bold text-slate-800 mb-3">Documentation des Design Patterns</h3>
+                            <p class="text-sm text-slate-600 mb-3">Pour chaque pattern utilise :</p>
+                            <ul class="text-sm text-slate-700 space-y-2">
+                                <li><strong>Ou</strong> il est utilise (fichier, classe, ligne)</li>
+                                <li><strong>Pourquoi</strong> ici et pas ailleurs</li>
+                                <li><strong>Quel probleme</strong> il resout concretement</li>
+                                <li><strong>Comment</strong> il facilite les tests</li>
+                                <li>Un <strong>schema simple</strong> ou diagramme UML (bonus)</li>
+                            </ul>
+                        </div>
+
+                        <!-- CHOIX IMPOSSIBLES -->
+                        <div class="bg-white border-2 border-orange-200 rounded-2xl p-6">
+                            <h3 class="text-lg font-bold text-slate-800 mb-3">Documentation des choix impossibles</h3>
+                            <p class="text-sm text-slate-600 mb-3">Pour chaque exigence non realisee :</p>
+                            <ul class="text-sm text-slate-700 space-y-2">
+                                <li><strong>Ce qui etait demande</strong></li>
+                                <li><strong>Pourquoi c'est irrealisable</strong> (cout, acces, temps, complexite)</li>
+                                <li><strong>Ce qui aurait ete mis en place</strong> (outil, configuration, architecture)</li>
+                                <li><strong>Le workaround choisi</strong> (ou absence justifiee)</li>
+                            </ul>
+                            <div class="callout callout-danger mt-3">
+                                <p class="text-xs text-red-900">Une exigence ignoree sans justification = points perdus. Une explication technique claire = points gagnes.</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ============================================================ -->
+                <!-- GRILLE D'EVALUATION -->
+                <!-- ============================================================ -->
+                <section id="evaluation" class="section-content mb-16">
+                    <h2 class="text-3xl font-bold text-slate-800 mb-6 flex items-center gap-3">
+                        <span class="bg-purple-100 text-purple-700 w-10 h-10 rounded-lg flex items-center justify-center text-lg font-bold">&star;</span>
+                        Grille d'evaluation
+                    </h2>
+
+                    <div class="bg-white border-2 border-purple-200 rounded-2xl overflow-hidden mb-6">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white">
+                                    <th class="p-4 text-left font-semibold">Critere</th>
+                                    <th class="p-4 text-center font-semibold">Points</th>
+                                    <th class="p-4 text-left font-semibold">Ce qu'on evalue</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="border-b border-slate-100">
+                                    <td class="p-4 font-semibold text-slate-800">Code & Design Patterns</td>
+                                    <td class="p-4 text-center"><span class="bg-purple-100 text-purple-700 font-bold px-3 py-1 rounded-full text-xs">/4</span></td>
+                                    <td class="p-4 text-slate-600 text-xs">Architecture claire, 3+ patterns justifies, code propre, principes SOLID, separation des responsabilites</td>
+                                </tr>
+                                <tr class="border-b border-slate-100 bg-slate-50">
+                                    <td class="p-4 font-semibold text-slate-800">Tests</td>
+                                    <td class="p-4 text-center"><span class="bg-purple-100 text-purple-700 font-bold px-3 py-1 rounded-full text-xs">/3</span></td>
+                                    <td class="p-4 text-slate-600 text-xs">Unitaires + integration, structure AAA, nommage, couverture &ge; 70%, tests pertinents et non triviaux</td>
+                                </tr>
+                                <tr class="border-b border-slate-100">
+                                    <td class="p-4 font-semibold text-slate-800">Qualite automatisee</td>
+                                    <td class="p-4 text-center"><span class="bg-purple-100 text-purple-700 font-bold px-3 py-1 rounded-full text-xs">/2</span></td>
+                                    <td class="p-4 text-slate-600 text-xs">Lint, analyse statique (SonarCloud), scan securite dependances, pre-commit hooks</td>
+                                </tr>
+                                <tr class="border-b border-slate-100 bg-slate-50">
+                                    <td class="p-4 font-semibold text-slate-800">Git & Conventions</td>
+                                    <td class="p-4 text-center"><span class="bg-purple-100 text-purple-700 font-bold px-3 py-1 rounded-full text-xs">/2</span></td>
+                                    <td class="p-4 text-slate-600 text-xs">Conventional commits, branches, PR (min 5), protection main, historique propre</td>
+                                </tr>
+                                <tr class="border-b border-slate-100">
+                                    <td class="p-4 font-semibold text-slate-800">Docker</td>
+                                    <td class="p-4 text-center"><span class="bg-purple-100 text-purple-700 font-bold px-3 py-1 rounded-full text-xs">/2</span></td>
+                                    <td class="p-4 text-slate-600 text-xs">Multi-stage, securite (non-root, pas de secrets), optimisation, Compose si applicable, scan Trivy</td>
+                                </tr>
+                                <tr class="border-b border-slate-100 bg-slate-50">
+                                    <td class="p-4 font-semibold text-slate-800">Pipeline CI/CD</td>
+                                    <td class="p-4 text-center"><span class="bg-purple-100 text-purple-700 font-bold px-3 py-1 rounded-full text-xs">/3</span></td>
+                                    <td class="p-4 text-slate-600 text-xs">CI complete, CD staging/prod, parallelisme, cache, artefacts, pipeline vert au rendu</td>
+                                </tr>
+                                <tr class="border-b border-slate-100">
+                                    <td class="p-4 font-semibold text-slate-800">Infrastructure as Code</td>
+                                    <td class="p-4 text-center"><span class="bg-purple-100 text-purple-700 font-bold px-3 py-1 rounded-full text-xs">/2</span></td>
+                                    <td class="p-4 text-slate-600 text-xs">Terraform et/ou Ansible, fonctionnel ou documente en detail si impossible</td>
+                                </tr>
+                                <tr class="border-b border-slate-100 bg-slate-50">
+                                    <td class="p-4 font-semibold text-slate-800">Monitoring & Observabilite</td>
+                                    <td class="p-4 text-center"><span class="bg-purple-100 text-purple-700 font-bold px-3 py-1 rounded-full text-xs">/1</span></td>
+                                    <td class="p-4 text-slate-600 text-xs">Health check, logs structures JSON, metriques/dashboard, alerting</td>
+                                </tr>
+                                <tr class="bg-slate-50">
+                                    <td class="p-4 font-semibold text-slate-800">Documentation & Justifications</td>
+                                    <td class="p-4 text-center"><span class="bg-purple-100 text-purple-700 font-bold px-3 py-1 rounded-full text-xs">/1</span></td>
+                                    <td class="p-4 text-slate-600 text-xs">README complet, schemas, choix justifies, elements impossibles documentes</td>
+                                </tr>
+                                <tr class="bg-gradient-to-r from-purple-50 to-indigo-50">
+                                    <td class="p-4 font-bold text-purple-800 text-lg">TOTAL</td>
+                                    <td class="p-4 text-center"><span class="bg-purple-600 text-white font-bold px-4 py-1 rounded-full text-sm">/20</span></td>
+                                    <td class="p-4 text-purple-700 font-semibold text-xs"></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="callout callout-success mb-6">
+                        <p class="font-semibold text-green-800">Livrable final</p>
+                        <p class="text-sm text-green-900 mt-2">
+                            Un <strong>repository GitHub public</strong> contenant l'integralite du projet : code, pipeline, IaC, monitoring, documentation. Le correcteur doit pouvoir <strong>cloner le repo</strong>, lire le README, comprendre les choix, voir le pipeline vert, et lancer le projet en local. <strong>Tout ce qui n'est pas dans le repo n'existe pas.</strong>
+                        </p>
+                    </div>
+
+                    <div class="callout callout-danger">
+                        <p class="font-semibold text-red-800">Dernier rappel</p>
+                        <p class="text-sm text-red-900 mt-2">
+                            L'IA peut generer du code, un Dockerfile, un pipeline YAML. Ce qu'elle ne peut pas faire a votre place : <strong>justifier vos choix dans le contexte specifique de VOTRE projet</strong>. Pourquoi ce pattern et pas un autre ? Pourquoi ce seuil de couverture ? Pourquoi cette strategie de deploiement ? C'est la que se fait la difference entre un etudiant qui comprend et un etudiant qui copie-colle.
+                        </p>
+                    </div>
+                </section>
+
+            </div>
+
+            <!-- FOOTER -->
+            <footer class="bg-slate-50 border-t border-slate-200 px-8 py-6 text-center">
+                <p class="text-sm text-slate-500">CI/CD & DevOps &mdash; Master 1 Full Stack &mdash; Projet individuel sur 3 jours</p>
+                <p class="text-xs text-slate-400 mt-1">Bon courage. Pensez architecture, pas juste code.</p>
+            </footer>
+
+        </main>
+    </div>
+
+    <!-- SCRIPTS -->
+    <script>
+        // Mobile menu toggle
+        const menuBtn = document.getElementById('menuBtn');
+        const sidebar = document.getElementById('sidebar');
+        menuBtn?.addEventListener('click', () => sidebar.classList.toggle('open'));
+
+        // Scroll animation
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, { threshold: 0.1 });
+
+        document.querySelectorAll('.section-content').forEach(el => observer.observe(el));
+
+        // Active sidebar link
+        const sections = document.querySelectorAll('section[id]');
+        const sidebarLinks = document.querySelectorAll('.sidebar-link');
+
+        window.addEventListener('scroll', () => {
+            const mainContent = document.querySelector('.main-content');
+            let current = '';
+            sections.forEach(section => {
+                const rect = section.getBoundingClientRect();
+                if (rect.top <= 200) {
+                    current = section.getAttribute('id');
+                }
+            });
+            sidebarLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === `#${current}`) {
+                    link.classList.add('active');
+                }
+            });
+        }, true);
+
+        // Attach scroll listener to main content
+        document.querySelector('.main-content')?.addEventListener('scroll', () => {
+            let current = '';
+            sections.forEach(section => {
+                const rect = section.getBoundingClientRect();
+                if (rect.top <= 200) {
+                    current = section.getAttribute('id');
+                }
+            });
+            sidebarLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === `#${current}`) {
+                    link.classList.add('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
