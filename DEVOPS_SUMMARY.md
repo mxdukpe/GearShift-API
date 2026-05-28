@@ -1,6 +1,6 @@
 # 🎓 Rapport Détaillé — TP DevOps & CI/CD (GearShift-API)
 
-Ce document résume l'ensemble des concepts, choix d'architecture et implémentations techniques réalisés sur le projet **GearShift-API**. Il a pour but de t'aider à comprendre en profondeur chaque composant du TP, leur utilité et comment ils s'articulent.
+Ce document résume l'ensemble des concepts, choix d'architecture, implémentations techniques et commandes exécutées sur le projet **GearShift-API**. Il a pour but de t'aider à comprendre en profondeur chaque composant du TP, leur utilité et comment ils s'articulent.
 
 ---
 
@@ -46,57 +46,93 @@ Quatre Design Patterns majeurs ont été mis en œuvre :
 
 ---
 
-## 🧪 3. Validation & Tests Automatisés
+## 🧪 3. Validation & Tests Automatisés (Détails)
 
-Un des prérequis essentiels du TP était d'avoir une couverture de tests supérieure à **70%**. Nous avons atteint **88.6%** grâce à l'implémentation de tests rigoureux.
+Un des prérequis essentiels du TP était d'avoir une couverture de tests supérieure à **70%**. Nous avons atteint **88.6%** grâce à deux types de tests complémentaires.
 
-* **Jest & Supertest** : Utilisés pour lancer des tests unitaires (tester une fonction isolée) et d'intégration (tester des routes HTTP de bout en bout).
+### A. Les Tests Unitaires (Unit Tests)
+* **But :** Valider le comportement logique d'une classe ou d'une fonction isolée du reste du système.
+* **Fonctionnement :** On isole la logique en mockant (simulant) les bases de données et les appels externes.
+* **Ce qui a été testé :**
+  - Les transitions d'état d'un équipement (State Pattern).
+  - Les calculs de tarifs selon les profils (Strategy Pattern).
+  - La logique métier des services comme `ReservationService` et `EquipmentService`.
+  - La connexion et les méthodes de la classe `Database`.
+
+### B. Les Tests d'Intégration (Integration Tests)
+* **But :** Vérifier que les différents modules de l'application collaborent correctement lorsqu'ils sont assemblés, y compris les routes HTTP et les contrôleurs.
+* **Fonctionnement :** On utilise **Supertest** pour envoyer de vraies requêtes HTTP (`GET`, `POST`, `PATCH`, `DELETE`) à notre application et on utilise une base de données SQLite en mémoire pour valider les modifications de données.
+* **Ce qui a été testé :**
+  - La création, location, retour, et suppression d'un équipement via l'API (`/api/equipment`).
+  - La création, consultation et annulation d'une réservation (`/api/reservations`), en vérifiant que le prix facturé correspond aux règles métier.
+
+### C. Bonnes Pratiques Appliquées
 * **Structure AAA (Arrange, Act, Assert)** : 
-  - *Arrange* : On prépare les données et l'environnement de test.
-  - *Act* : On exécute l'action / la fonction à tester.
-  - *Assert* : On valide que le résultat obtenu est celui attendu.
-* **Règle de nommage** : Les tests sont nommés sous la forme `should [résultat] when [condition]` (ex: `should calculate base price when standard strategy is used`).
+  - *Arrange* : On prépare les données (ex: création d'un utilisateur étudiant).
+  - *Act* : On exécute l'action à tester (ex: calcul du prix de location).
+  - *Assert* : On valide le résultat (ex: vérifier que le prix a bien subi les 20% de remise).
+* **Règle de nommage** : Les tests sont nommés sous la forme `should [résultat attendu] when [condition de départ]` pour former des phrases lisibles.
 * **Résolution du TS Conflict** : Pour éviter que le compilateur TypeScript de production (`tsconfig.json`) n'entre en conflit avec les types de tests, nous avons créé un fichier dédié [tests/tsconfig.json](file:///Users/venusasseakakpo/CI_CD/GearShift-API/tests/tsconfig.json) qui force l'inclusion des fichiers `.test.ts`.
 
 ---
 
 ## 🐳 4. Conteneurisation (Docker & Docker Compose)
 
-Docker permet d'encapsuler l'application dans un conteneur contenant tout le nécessaire pour s'exécuter, éliminant le fameux *"ça marche sur ma machine"*.
+Docker résout le problème de l'environnement d'exécution en empaquetant l'application et ses dépendances dans un environnement isolé appelé **Conteneur**, construit à partir d'une **Image**.
 
 ### Le Dockerfile (Multi-stage Build)
-Le [Dockerfile](file:///Users/venusasseakakpo/CI_CD/GearShift-API/Dockerfile) est divisé en deux étapes (stages) :
-1. **Étape 1 : Builder** : On installe toutes les dépendances (y compris de développement) et on compile le code TypeScript en JavaScript (`npm run build`).
-2. **Étape 2 : Production** : On ne repart que d'une image Node.js ultra-légère, on y copie uniquement le code compilé et on y installe uniquement les dépendances nécessaires à l'exécution (`npm ci --omit=dev --ignore-scripts`).
-   - *Pourquoi `--ignore-scripts` ?* En mode production sans les dépendances de développement, Husky (gestionnaire de hooks git) ne peut pas s'installer et ferait échouer le build Docker si les scripts d'installation se déclenchaient.
+Pour optimiser les performances et la sécurité, nous utilisons un build multi-étapes (multi-stage) :
+1. **Étape de Build (`builder`)** :
+   - Base : Image Node.js complète.
+   - Action : Copie du code TypeScript, installation de toutes les dépendances (y compris les outils de développement comme TypeScript et les types Jest), et compilation du code avec `npm run build` (génère le dossier `dist` en pur JavaScript).
+2. **Étape de Production (`production`)** :
+   - Base : Image Node.js ultra-légère (`node:20-alpine`) pour réduire la taille finale et le nombre de vulnérabilités système.
+   - Action : Copie uniquement du dossier compilé `dist` et du `package.json`. On y installe uniquement les dépendances nécessaires au fonctionnement en production grâce à `npm ci --omit=dev --ignore-scripts`.
+   - *Pourquoi `--ignore-scripts` ?* Cela évite que npm tente d'exécuter des scripts de cycle de vie comme `prepare` de Husky. Husky étant une dépendance de dev, son installation échouerait sans cela en mode production.
 
 ### Docker Compose
-Le fichier `docker-compose.yml` orchestre deux conteneurs :
-1. **L'API** (notre application Node.js).
-2. **La base de données PostgreSQL**.
-* **Healthcheck & Dépendance** : Le conteneur PostgreSQL dispose d'un test de santé (`healthcheck`). Grâce à la directive `depends_on` avec la condition `service_healthy`, le conteneur API attend que PostgreSQL soit totalement prêt à recevoir des connexions avant de démarrer.
+Le fichier `docker-compose.yml` automatise la création et la mise en réseau de deux services interdépendants :
+* **db** : Un conteneur PostgreSQL officiel qui utilise un volume persistant pour stocker les données. Il possède un script de santé (`healthcheck`) qui tourne toutes les 10 secondes pour vérifier si PostgreSQL accepte les connexions (`pg_isready`).
+* **api** : Notre conteneur Node.js. Grâce à `depends_on: db: condition: service_healthy`, l'API attend que la base de données PostgreSQL soit pleinement opérationnelle avant de démarrer, évitant ainsi les plantages de connexion au démarrage.
 
 ---
 
-## 🚀 5. Pipeline CI/CD (GitHub Actions)
+## 🚀 5. Le Pipeline CI/CD (GitHub Actions)
 
-Le pipeline CI/CD automatisé est défini dans [.github/workflows/ci.yml](file:///Users/venusasseakakpo/CI_CD/GearShift-API/.github/workflows/ci.yml). Il s'exécute à chaque Pull Request ou Push sur la branche principale `main`.
+Le pipeline défini dans [.github/workflows/ci.yml](file:///Users/venusasseakakpo/CI_CD/GearShift-API/.github/workflows/ci.yml) orchestre automatiquement la validation et la livraison de chaque modification de code.
 
-### Fonctionnement du Pipeline :
-1. **Étape 1 : Vérifications en parallèle** (Gain de temps) :
-   - `lint` : Vérifie la mise en forme du code.
-   - `test` : Exécute les tests Jest et vérifie que la couverture de code est supérieure au seuil imposé.
-   - `security-audit` : Analyse si les dépendances npm contiennent des vulnérabilités connues (`npm audit`).
-2. **Étape 2 : Build** (s'exécute uniquement si l'étape 1 est verte) :
-   - Compile le code TypeScript.
-3. **Étape 3 : Docker Scan (Trivy)** :
-   - Construit l'image Docker de production en local.
-   - Utilise **Trivy** pour scanner cette image Docker et s'assurer que l'OS de base ou le code ne contiennent pas de failles de sécurité critiques. Si Trivy trouve une faille critique, le pipeline échoue.
-4. **Étape 4 : Déploiement Staging (CD)** :
-   - S'exécute uniquement sur un push sur la branche `main`.
-   - Convertit le nom du dépôt GitHub en minuscules (car les registres Docker refusent les majuscules).
-   - Se connecte au registre sécurisé de GitHub (GHCR - GitHub Container Registry).
-   - Publie l'image finale sous les tags `latest` et `[commit_sha]`.
+### Concepts Clés :
+* **Workflow** : L'ensemble du processus automatisé déclenché par un événement (ex: Push ou Pull Request sur `main`).
+* **Runner** : La machine virtuelle hébergée par GitHub (ici sous Ubuntu) qui exécute nos commandes.
+* **Jobs** : Groupes d'étapes. Certains jobs tournent en **parallèle** pour gagner du temps, d'autres sont **séquentiels** et dépendent de la réussite des précédents.
+
+### Cycle d'exécution du Pipeline :
+```mermaid
+graph TD
+    A[Push / PR sur main] --> B(🧹 Linting & Formatting)
+    A --> C(🧪 Tests & Coverage)
+    A --> D(🔒 Dependency Security Audit)
+    B --> E{Tous verts ?}
+    C --> E
+    D --> E
+    E -- Oui --> F(🏗️ Build Application)
+    E -- Non --> G[❌ Pipeline Échoué]
+    F --> H(🐳 Docker Build & Trivy Scan)
+    H --> I{Trivy vert ?}
+    I -- Non --> G
+    I -- Oui --> J{Branche main & Push ?}
+    J -- Oui --> K(🚀 Push to GHCR - CD)
+    J -- Non --> L[✅ Validation Réussie]
+```
+
+1. **Parallélisation (Lint, Test, Audit)** : 
+   - `lint` vérifie la mise en forme du code.
+   - `test` s'assure que tous les tests passent et que la couverture de code est supérieure ou égale à 70%.
+   - `security-audit` exécute un `npm audit` pour vérifier si des dépendances tierces contiennent des failles de sécurité.
+2. **Séquentialité (Build, Scan, CD)** :
+   - `build` n'est lancé que si les tests et le linter sont parfaits.
+   - `docker-build-scan` construit l'image Docker finale et utilise **Trivy** pour l'analyser. Trivy détecte les vulnérabilités de sécurité à l'intérieur du conteneur (dans l'OS Alpine ou dans les modules Node).
+   - `deploy-staging` s'exécute uniquement si l'image est sécurisée et que le commit a été fusionné sur `main`. L'image est renommée en minuscules (requis par les normes des registres Docker) puis envoyée sur **GHCR** (registre Docker de GitHub).
 
 ---
 
@@ -137,6 +173,75 @@ Un projet DevOps doit être surveillé en temps réel.
 | **Scan de vulnérabilités (Trivy/Audit)** | **Indispensable** | Assure la sécurité du conteneur avant publication. |
 | **SonarCloud (Analyse statique)** | *Optionnel / Workaround* | Idéal en entreprise, mais nécessite un compte et un jeton privé. Commenté dans le YAML pour éviter de bloquer le pipeline en l'absence de clé de licence. |
 | **Déploiement sur un vrai VPS cloud** | *Optionnel / Simulé* | Simulé via la publication de l'image Docker sur GHCR pour des raisons de coût et d'absence de serveur physique pour l'évaluation. |
+
+---
+
+## 🛠️ 9. Commandes Utiles de ce TP (Cheat Sheet)
+
+Voici la liste des commandes indispensables à connaître et à expliquer lors de ton évaluation orale :
+
+### A. Gestion locale de l'application & Tests
+```bash
+# Installer toutes les dépendances locales (dev + prod)
+npm install
+
+# Lancer l'application en mode de développement avec rechargement automatique (Hot Reload)
+npm run dev
+
+# Compiler le code TypeScript vers du JavaScript pur dans le répertoire /dist
+npm run build
+
+# Lancer la suite de tests et afficher le rapport de couverture (coverage) dans le terminal
+npm run test:coverage
+
+# Lancer le linter pour analyser et vérifier la mise en forme du code
+npm run lint
+```
+
+### B. Commandes Docker (Conteneurs)
+```bash
+# Construire manuellement l'image Docker de production localement
+docker build -t gearshift-api:latest .
+
+# Lancer l'image construite localement sur le port 3000
+docker run -p 3000:3000 gearshift-api:latest
+
+# Lancer l'API et la BDD PostgreSQL en arrière-plan via Docker Compose
+docker-compose up -d
+
+# Arrêter tous les conteneurs et supprimer les réseaux créés par Docker Compose
+docker-compose down
+
+# Vérifier le statut de tes conteneurs et s'assurer qu'ils sont sains ("healthy")
+docker-compose ps
+
+# Afficher et suivre en temps réel les logs de tes conteneurs Docker Compose
+docker-compose logs -f
+```
+
+### C. Commandes Ansible (Déploiement & Configuration)
+```bash
+# Vérifier la syntaxe du playbook Ansible sans l'exécuter
+ansible-playbook -i ansible/inventory.ini ansible/playbook.yml --syntax-check
+
+# Exécuter le playbook pour installer Docker et déployer l'application sur tes serveurs cibles
+ansible-playbook -i ansible/inventory.ini ansible/playbook.yml
+```
+
+### D. Commandes Git (Gestion des modifications)
+```bash
+# Voir l'état actuel de tes fichiers modifiés, ajoutés ou non suivis
+git status
+
+# Ajouter des fichiers spécifiques à l'index (Staging Area) avant validation
+git add README.md DEVOPS_SUMMARY.md
+
+# Valider tes modifications locales avec un message respectant les conventions
+git commit -m "docs: add comprehensive devops documentation and commands"
+
+# Envoyer tes modifications locales vers la branche distante feat/mvp-core
+git push origin feat/mvp-core
+```
 
 ---
 
