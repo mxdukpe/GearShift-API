@@ -14,6 +14,7 @@
     ],
     /* Module Resolution */
     "moduleResolution": "node10",
+    "ignoreDeprecations": "6.0",
     "esModuleInterop": true,
     "resolveJsonModule": true,
     /* Other Outputs */
