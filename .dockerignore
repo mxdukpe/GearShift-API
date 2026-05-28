@@ -1,0 +1,8 @@
+node_modules
+dist
+coverage
+.git
+.github
+.husky
+*.md
+.DS_Store

@@ -21,7 +21,7 @@ module.exports = [
       ...typescriptPlugin.configs.recommended.rules,
       ...prettierConfig.rules,
       "prettier/prettier": "error",
-      "@typescript-eslint/no-unused-vars": "error",
+      "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
       "@typescript-eslint/no-explicit-any": "warn",
     },
   },

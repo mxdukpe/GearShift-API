@@ -1,4 +1,4 @@
-name: Code Quality CI
+name: GearShift API — CI/CD Pipeline
 
 on:
   push:
@@ -6,23 +6,185 @@ on:
   pull_request:
     branches: [ "main" ]
 
+permissions:
+  contents: read
+  packages: write
+
 jobs:
+  # ==========================================
+  # JOBS PARALLÈLES (VÉRIFICATIONS ET QUALITÉ)
+  # ==========================================
+
   lint:
-    name: Linting & Formatting
+    name: 🧹 Linting & Formatting
     runs-on: ubuntu-latest
-    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-          
+
       - name: Install dependencies
         run: npm ci
-        
+
       - name: Run Linter
         run: npm run lint
+
+  test:
+    name: 🧪 Tests & Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Tests with Coverage
+        run: npm run test:coverage
+
+      # Upload des rapports de couverture pour SonarCloud ou pour archivage
+      - name: Upload coverage reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: lcov-report
+          path: coverage/
+
+  security-audit:
+    name: 🔒 Dependency Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Audit dependencies for vulnerabilities
+        run: npm audit --audit-level=high
+
+  sonarcloud:
+    name: 📊 SonarCloud Quality Gate
+    runs-on: ubuntu-latest
+    needs: [test] # SonarCloud a besoin des rapports de couverture générés par les tests
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Nécessaire pour une meilleure analyse SonarCloud
+
+      - name: Download coverage reports
+        uses: actions/download-artifact@v4
+        with:
+          name: lcov-report
+          path: coverage/
+
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+  # ==========================================
+  # JOBS SÉQUENTIELS (BUILD & DOCKER SCAN)
+  # ==========================================
+
+  build:
+    name: 🏗️ Build Application
+    runs-on: ubuntu-latest
+    needs: [lint, test, security-audit]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build TypeScript code
+        run: npm run build
+
+  docker-build-scan:
+    name: 🐳 Docker Build & Trivy Scan
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Build de l'image locale pour le scan de sécurité
+      - name: Build local Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          load: true
+          tags: gearshift-api:latest
+          target: production
+
+      # Scan de l'image avec Trivy
+      - name: Run Trivy vulnerability scanner on Docker image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'gearshift-api:latest'
+          format: 'table'
+          exit-code: '1' # Fait échouer le pipeline si vulnérabilités critiques détectées
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL'
+
+  # ==========================================
+  # DÉPLOIEMENT CONTINU (CD SIMULÉ VIA GHCR)
+  # ==========================================
+
+  deploy-staging:
+    name: 🚀 Push to GHCR (Staging)
+    runs-on: ubuntu-latest
+    needs: [docker-build-scan]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry (GHCR)
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}:latest
+            ghcr.io/${{ github.repository }}:${{ github.sha }}
+          target: production
