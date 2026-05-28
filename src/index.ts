@@ -9,10 +9,27 @@ import { ReservationController } from './presentation/controllers/ReservationCon
 import { createEquipmentRoutes } from './presentation/routes/equipmentRoutes';
 import { createReservationRoutes } from './presentation/routes/reservationRoutes';
 import { errorHandler } from './presentation/middleware/errorHandler';
+import { Logger } from './infrastructure/logging/Logger';
 
 export function createApp() {
   const app = express();
   app.use(express.json());
+
+  const logger = Logger.getInstance();
+
+  // Middleware pour logger chaque requête HTTP reçue au format JSON
+  app.use((req, res, next) => {
+    const start = Date.now();
+    res.on('finish', () => {
+      logger.info('HTTP Request processed', {
+        method: req.method,
+        url: req.url,
+        status: res.statusCode,
+        durationMs: Date.now() - start,
+      });
+    });
+    next();
+  });
 
   // Singleton — unique instance de la base de données
   const db = Database.getInstance();
@@ -55,6 +72,6 @@ if (require.main === module) {
   const PORT = process.env.PORT || 3000;
   const app = createApp();
   app.listen(PORT, () => {
-    console.log(`🚀 GearShift-API running on http://localhost:${PORT}`);
+    Logger.getInstance().info(`🚀 GearShift-API running on http://localhost:${PORT}`);
   });
 }
