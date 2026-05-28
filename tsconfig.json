@@ -33,11 +33,7 @@
     "skipLibCheck": true
   },
   "include": [
-    "src/**/*",
-    "tests/unit/Equipment.test.ts",
-    "tests/unit/Reservation.test.ts",
-    "tests/unit/EquipmentState.test.ts",
-    "tests/unit/PricingStrategy.test.ts"
+    "src/**/*"
   ],
   "exclude": [
     "node_modules",
