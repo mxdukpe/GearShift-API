@@ -321,6 +321,48 @@ curl -X POST http://localhost:3000/api/reservations \
 ```bash
 curl -X GET http://localhost:3000/api/reservations
 ```
+---
+
+## 💰 11. Estimation des Coûts de Déploiement
+
+Voici l'estimation budgétaire mensuelle pour déployer cette infrastructure en fonction de la taille de l'audience :
+
+| Phase | Audience cible | Architecture recommandée | Coût mensuel |
+| :--- | :--- | :--- | :--- |
+| **Lancement** | $< 1\ 000$ utilisateurs | Single VPS (API + PostgreSQL locaux dans Docker Compose) | **~7 € à 11 €** |
+| **Croissance** | $1\ 000$ à $50\ 000$ utilisateurs | 2x serveurs API + 1 Load Balancer + PostgreSQL Managé | **~60 €** |
+| **Grande Échelle** | $50\ 000+$ utilisateurs | Autoscaling (ECS/Cloud Run) + Redis Cache + Aurora Multi-AZ | **~300 € à 500 €+** |
+
+---
+
+## 🎤 12. Guide pour ta Présentation Orale (Pitch & Slides)
+
+Voici une trame prête à l'emploi et structurée sous forme de diapositives pour t'aider à présenter ton projet de manière percutante devant le jury :
+
+### 🛝 Slide 1 : Introduction & Enjeux
+* **Titre** : GearShift-API : Une chaîne DevOps moderne et sécurisée.
+* **Ce qu'il faut dire** :
+  > *"Bonjour à tous. GearShift-API est une plateforme backend de location de matériel technologique. L'enjeu de ce projet n'était pas seulement fonctionnel, mais résidait dans la mise en place d'une chaîne DevOps complète et automatisée. Mon but a été de garantir que chaque modification de code soit testée, sécurisée, empaquetée et prête à être déployée sans intervention humaine et sans risque de rébellion ou de régression."*
+
+### 🛝 Slide 2 : Architecture Logicielle & Design Patterns
+* **Titre** : Une base de code propre et testable.
+* **Ce qu'il faut dire** :
+  > *"Pour que notre application soit évolutive, j'ai implémenté les principes de la Clean Architecture. Le domaine métier est totalement isolé de l'infrastructure. J'ai utilisé 4 patrons de conception clés : le **Singleton** pour centraliser les connexions et logs, le **Repository** pour découpler le stockage du code métier, le **State Pattern** pour gérer dynamiquement le cycle de vie du matériel (disponible, loué, en maintenance) sans if/else complexes, et le **Strategy Pattern** pour moduler les tarifs (étudiants, week-end)."*
+
+### 🛝 Slide 3 : Conteneurisation & Intégration Continue (CI)
+* **Titre** : Qualité, portabilité et sécurité.
+* **Ce qu'il faut dire** :
+  > *"Chaque push déclenche un pipeline GitHub Actions. En parallèle, nous vérifions le linting, la sécurité des dépendances npm et exécutons les tests unitaires et d'intégration via Jest et Supertest. La couverture de code atteint **88.6%**, dépassant le seuil imposé de 70%. Pour la portabilité, l'application est conteneurisée via Docker. J'ai optimisé le Dockerfile avec du **multi-stage build** pour obtenir une image finale ultra-légère et sécurisée en y installant uniquement les dépendances de production."*
+
+### 🛝 Slide 4 : Déploiement Continu (CD) & Infrastructure-as-Code
+* **Titre** : Automatisation et reproductibilité.
+* **Ce qu'il faut dire** :
+  > *"Pour le déploiement continu, l'image validée est poussée sur le registre GitHub (GHCR). Le provisionnement et le déploiement sur les serveurs distants sont automatisés grâce à **Ansible**. J'ai rédigé un playbook idempotent qui configure Docker et déploie notre conteneur. Cela permet de déployer sur n'importe quel serveur cible en une seule commande."*
+
+### 🛝 Slide 5 : Observabilité & Synthèse Budgétaire
+* **Titre** : Suivi en production et coûts.
+* **Ce qu'il faut dire** :
+  > *"Enfin, pour l'observabilité, l'application produit des logs structurés au format JSON standard, prêts à être indexés pour du monitoring en temps réel, et dispose d'un endpoint de santé (/health) interrogé toutes les 30 secondes. En termes de coûts, cette infrastructure est très économique : elle peut démarrer sur un simple VPS à **10 € / mois** pour 1000 utilisateurs, et évoluer vers une architecture hautement disponible et élastique à environ **60 € / mois** au fur et à mesure de sa croissance."*
 
 ---
 
