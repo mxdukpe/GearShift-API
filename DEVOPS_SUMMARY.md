@@ -18,6 +18,27 @@ L'objectif de ce TP n'était pas seulement de coder l'application, mais de mettr
 
 ---
 
+## 🌟 Synthèse DevOps : Pourquoi ces concepts ? (Général vs Projet)
+
+Voici une vue synthétique du rôle de chaque brique technologique pour ton projet et dans l'industrie en général :
+
+### 1. La Conteneurisation & Docker
+* **En général :** Permet d'encapsuler une application dans un environnement isolé (le **conteneur**) contenant son code, sa version de runtime et ses dépendances. Cela résout le problème du *"ça marche sur mon PC mais ça plante en prod"*.
+* **Dans ce projet :** L'application Node.js s'exécute dans un conteneur et la base de données PostgreSQL dans un autre, connectés via un réseau virtuel géré par `docker-compose`.
+
+### 2. Le Pipeline CI/CD (GitHub Actions)
+* **En général :** Automatise la validation (lint, tests, sécurité) et la livraison du code à chaque modification. Cela évite les déploiements manuels propices aux erreurs humaines.
+* **Dans ce projet :** À chaque commit ou PR, GitHub Actions exécute ESLint, lance les tests (bloquant si couverture < 70%), effectue des audits de sécurité avec Trivy, et publie l'image de staging sur GHCR.
+
+### 3. L'Infrastructure as Code (IaC) & Ansible
+* **En général :** Automatise la configuration et le déploiement sur les serveurs à l'aide de scripts descriptifs. Permet de configurer 10 ou 100 serveurs à l'identique de manière reproductible et rapide.
+* **Dans ce projet :** Le playbook Ansible installe Docker sur le serveur cible, prépare les répertoires et déploie de façon idempotente la configuration via `docker-compose`.
+
+### 4. Le Monitoring & l'Observabilité (Logs JSON & Healthcheck)
+* **En général :** Assure le suivi en temps réel de la santé de l'application en production, permettant de détecter les pannes et diagnostiquer les bugs instantanément.
+* **Dans ce projet :** Les logs JSON structurés permettent l'indexation facile dans un outil de collecte, tandis que l'endpoint `/health` valide la liaison API-BDD toutes les 30 secondes pour le healthcheck de Docker.
+
+---
 ## 📐 2. Architecture & Design Patterns (Côté Code)
 
 Pour que l'application soit maintenable et évolutive, elle est structurée selon la **Clean Architecture** (ou Architecture Hexagonale). Le code métier (le domaine) est totalement indépendant des frameworks, bases de données ou outils de log (l'infrastructure).
