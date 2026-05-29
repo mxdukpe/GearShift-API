@@ -266,6 +266,64 @@ git push origin feat/mvp-core
 
 ---
 
+## 💻 10. Pourquoi pas d'interface graphique (UI) & Comment tester l'API ?
+
+### A. Pourquoi pas d'interface utilisateur ?
+* **Projet Backend-Only** : GearShift-API est une **API REST**. Elle est conçue pour fonctionner comme un service backend pur.
+* **Consommation par des clients** : Dans le monde réel, une telle API est "consommée" par des applications clientes (comme un site web en React/Vue, ou une application mobile iOS/Android) qui font des requêtes HTTP en arrière-plan et mettent en forme les données JSON reçues.
+* **Focus DevOps** : Le but exclusif de ce TP est la maîtrise de la chaîne DevOps (tests automatisés, Docker, CI/CD, Ansible, Logs JSON, Healthcheck). Développer une interface visuelle en HTML/CSS n'est pas requis pour valider ces compétences.
+
+### B. Comment tester l'API manuellement (Cheat Sheet cURL)
+Pour tester ton API localement (soit après avoir lancé `npm run dev`, soit avec `docker-compose up -d`), ouvre ton terminal et exécute les requêtes suivantes :
+
+#### 1. Vérifier la santé de l'API (Healthcheck)
+```bash
+curl -X GET http://localhost:3000/health
+```
+* **Réponse attendue** : Un objet JSON avec `{"status":"healthy","database":"connected",...}`.
+
+#### 2. Créer un équipement (ex: ordinateur portable)
+```bash
+curl -X POST http://localhost:3000/api/equipment \
+  -H "Content-Type: application/json" \
+  -d '{"name": "MacBook Pro M3", "category": "ordinateur", "pricingStrategy": "STUDENT"}'
+```
+* **Réponse attendue** : L'équipement créé avec son identifiant unique (`id`), son état à `Available` et le détail de la stratégie de pricing.
+
+#### 3. Lister tous les équipements
+```bash
+curl -X GET http://localhost:3000/api/equipment
+```
+* **Réponse attendue** : Un tableau JSON contenant tous les équipements enregistrés.
+
+#### 4. Louer un équipement (changement d'état via State Pattern)
+Remplace `<EQUIPMENT_ID>` par l'identifiant obtenu à l'étape 2 :
+```bash
+curl -X PATCH http://localhost:3000/api/equipment/<EQUIPMENT_ID>/rent
+```
+* **Réponse attendue** : L'équipement avec son état mis à jour (`Rented`). Si tu lances la commande une deuxième fois, l'API renverra une erreur `409 Conflict` car l'équipement n'est plus disponible (validation via State Pattern).
+
+#### 5. Retourner l'équipement de location
+```bash
+curl -X PATCH http://localhost:3000/api/equipment/<EQUIPMENT_ID>/return
+```
+* **Réponse attendue** : L'équipement repasse à l'état `Available`.
+
+#### 6. Créer une réservation
+```bash
+curl -X POST http://localhost:3000/api/reservations \
+  -H "Content-Type: application/json" \
+  -d '{"userId": "user-456", "equipmentId": "<EQUIPMENT_ID>", "startDate": "2026-06-01", "endDate": "2026-06-05"}'
+```
+* **Réponse attendue** : La réservation créée avec le prix total de location calculé automatiquement par la stratégie choisie (ici `STUDENT` avec -20%).
+
+#### 7. Consulter toutes les réservations
+```bash
+curl -X GET http://localhost:3000/api/reservations
+```
+
+---
+
 ## 📖 Lexique DevOps Rapide
 
 * **CI (Intégration Continue)** : Pratique qui consiste à automatiser l'intégration, la compilation, le linting et le test du code à chaque modification.
