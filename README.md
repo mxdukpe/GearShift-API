@@ -1,3 +1,7 @@
+<p align="center">
+  <img src=".github/banner.png" alt="GearShift-API — API REST de location de matériel tech, architecture hexagonale et CI/CD" width="100%">
+</p>
+
 # 🚀 GearShift-API — Location de Matériel Technologique
 
 GearShift-API est une plateforme de location de matériel technologique (ordinateurs, écrans, accessoires) conçue avec une architecture robuste, des tests unitaires et d'intégration automatisés, et un pipeline DevOps complet (Docker, CI/CD, IaC, Monitoring).
